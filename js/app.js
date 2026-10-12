@@ -34,6 +34,12 @@ function adicionarMovimentacao(movimentacao) {
   }
   movimentacoes.push(movimentacao);
   salvarMovimentacoes();
+
+  document.dispatchEvent(
+    new CustomEvent("movimentacoes:atualizadas", {
+      detail: listarMovimentacoes(),
+    })
+  );
 }
 
 function salvarMovimentacoes() {
