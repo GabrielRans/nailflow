@@ -6,3 +6,27 @@ body {
   margin: 0;
   font-family: Arial, sans-serif;
 }
+
+main {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 32px 20px;
+}
+
+form {
+  display: grid;
+  gap: 16px;
+}
+
+form div {
+  display: grid;
+  gap: 6px;
+}
+
+input,
+select,
+textarea,
+button {
+  font: inherit;
+  padding: 10px;
+}

@@ -6,11 +6,84 @@
     <title>NailFlow</title>
 
     <link rel="stylesheet" href="./css/style.css">
+    <script src="./js/app.js" defer></script>
   </head>
   <body>
 
       <h1>NailFlow</h1>
 
-      <script src="./js/app.js"></script>
+      <main>
+        <section>
+          <h2>Nova movimentação</h2>
+
+          <form id="form-movimentacao">
+            <div>
+              <label for="tipo">Tipo</label>
+              <select id="tipo" name="tipo" required>
+                <option value="">Selecione</option>
+                <option value="entrada">Entrada</option>
+                <option value="saida">Saída</option>
+              </select>
+            </div>
+
+            <div>
+              <label for="valor">Valor</label>
+              <input
+                type="number"
+                id="valor"
+                name="valor"
+                min="0.01"
+                step="0.01"
+                required
+              >
+            </div>
+
+            <div>
+              <label for="descricao">Descrição</label>
+              <input
+                type="text"
+                id="descricao"
+                name="descricao"
+                maxlength="100"
+                required
+              >
+
+            </div>
+
+            <div>
+              <label for="categoria">Categoria</label>
+              <select id="categoria" name="categoria" required>
+                <option value="">Selecione</option>
+                <option value="procedimento">Procedimento</option>
+                <option value="material">Material</option>
+                <option value="servico">Serviço</option>
+                <option value="outro">Outro</option>
+              </select>
+            </div>
+
+            <div>
+              <label for="data">Data</label>
+              <input
+                type="date"
+                id="data"
+                name="data"
+                required
+              >
+            </div>
+
+            <div>
+              <label for="observacao">Observação</label>
+              <textarea
+                id="observacao"
+                name="observacao"
+                rows="4"
+                maxlength="300"
+              ></textarea>
+            </div>
+
+            <button type="submit">Salvar movimentação</button>
+          </form>
+        </section>
+      </main>
   </body>
 </html>
