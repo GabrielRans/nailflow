@@ -51,8 +51,40 @@ function carregarMovimentacoes() {
   }
 }
 
-function iniciarAplicacao() {
-  carregarMovimentacoes();
+// Retorna uma cópia da lista de movimentações cadastradas.
+function listarMovimentacoes() {
+  return movimentacoes.map((movimentacao) => ({
+    ...movimentacao,
+  }));
 }
 
-iniciarAplicacao();
+//Configura o comportamento do formulário de cadastro de movimentações.
+function configurarFormularioMovimentacao() {
+  const formulario = document.querySelector("#form-movimentacao");
+
+   formulario.addEventListener("submit", function (event) {
+    event.preventDefault();
+
+    const dadosFormulario = new FormData(formulario);
+
+    const movimentacao = {
+      id: crypto.randomUUID(),
+      tipo: dadosFormulario.get("tipo"),
+      valor: Number(dadosFormulario.get("valor")),
+      descricao: dadosFormulario.get("descricao"),
+      categoria: dadosFormulario.get("categoria"),
+      data: dadosFormulario.get("data"),
+      observacao: dadosFormulario.get("observacao")
+    };
+
+    adicionarMovimentacao(movimentacao);
+  });
+}
+
+function iniciarAplicacao() {
+  carregarMovimentacoes();
+  configurarFormularioMovimentacao();
+}
+
+// Inicia o NailFlow somente quando o DOM estiver completamente carregado.
+document.addEventListener("DOMContentLoaded", iniciarAplicacao);
