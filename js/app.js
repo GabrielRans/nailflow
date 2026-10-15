@@ -84,6 +84,7 @@ function configurarFormularioMovimentacao() {
     };
 
     adicionarMovimentacao(movimentacao);
+    formulario.reset();
   });
 }
 
