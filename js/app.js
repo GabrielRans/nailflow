@@ -67,7 +67,23 @@ function listarMovimentacoes() {
   }));
 }
 
-function renderizarMovimentacoes(movimentacoes) {}
+function renderizarMovimentacoes(movimentacoes) {
+  const lista = document.querySelector("#lista-movimentacoes");
+  lista.replaceChildren();
+
+  movimentacoes.forEach((movimentacao) => {
+    const item = document.createElement("li");
+    item.textContent = [
+      `Tipo: ${movimentacao.tipo}`,
+      `Descrição: ${movimentacao.descricao}`,
+      `Valor: R$ ${movimentacao.valor}`,
+      `Categoria: ${movimentacao.categoria}`,
+      `Data: ${movimentacao.data}`,
+    ].join(" | ");
+
+    lista.append(item);
+  });
+}
 
 //Configura o comportamento do formulário de cadastro de movimentações.
 function configurarFormularioMovimentacao() {
@@ -140,6 +156,7 @@ function validarMovimentacao(movimentacao) {
 
 function iniciarAplicacao() {
   carregarMovimentacoes();
+  renderizarMovimentacoes(listarMovimentacoes());
   configurarFormularioMovimentacao();
 }
 
