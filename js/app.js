@@ -136,6 +136,35 @@ function validarMovimentacao(movimentacao) {
   return true;
 }
 
+//Calcula os indicadores financeiros a partir das movimentações cadastradas.
+function calcularIndicadoresFinanceiros(movimentacoes) {
+  let totalEntradas = 0;
+  let totalSaidas = 0;
+
+  if (!Array.isArray(movimentacoes)) {
+    return {
+      totalEntradas: 0,
+      totalSaidas: 0,
+      saldo: 0
+    };
+  }
+
+  for (const movimentacao of movimentacoes) {
+    if (movimentacao.tipo === "entrada") {
+        totalEntradas += movimentacao.valor;
+      } else if (movimentacao.tipo === "saida") {
+      totalSaidas += movimentacao.valor;
+    }
+  }
+
+  const saldo = totalEntradas - totalSaidas;
+
+  return {
+    totalEntradas,
+    totalSaidas,
+    saldo
+  };
+}
 function iniciarAplicacao() {
   carregarMovimentacoes();
   configurarFormularioMovimentacao();
