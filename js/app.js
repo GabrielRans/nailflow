@@ -29,9 +29,10 @@ const CHAVE_MOVIMENTACOES = "nailflow_movimentacoes";
 let movimentacoes = [movimentacaoEntrada, movimentacaoSaida];
 
 function adicionarMovimentacao(movimentacao) {
-  if (movimentacao === undefined) {
-    return;
+  if (!validarMovimentacao(movimentacao)) {
+    return false;
   }
+
   movimentacoes.push(movimentacao);
   salvarMovimentacoes();
 
@@ -40,6 +41,8 @@ function adicionarMovimentacao(movimentacao) {
       detail: listarMovimentacoes(),
     })
   );
+
+  return true;
 }
 
 function salvarMovimentacoes() {
@@ -83,9 +86,54 @@ function configurarFormularioMovimentacao() {
       observacao: dadosFormulario.get("observacao")
     };
 
-    adicionarMovimentacao(movimentacao);
-    formulario.reset();
+    const movimentacaoAdicionada = adicionarMovimentacao(movimentacao);
+
+    if (movimentacaoAdicionada) {
+      formulario.reset();
+    }
   });
+}
+
+// Valida os dados obrigatórios antes de adicionar uma movimentação.
+function validarMovimentacao(movimentacao) {
+  if (!movimentacao || typeof movimentacao !== "object") {
+    return false;
+  }
+
+  const tiposValidos = ["entrada", "saida"];
+  const categoriasValidas = ["procedimento", "material", "servico", "outro"];
+
+  if (!tiposValidos.includes(movimentacao.tipo)) {
+    return false;
+  }
+
+  if (
+    typeof movimentacao.valor !== "number" ||
+    !Number.isFinite(movimentacao.valor) ||
+    movimentacao.valor <= 0
+  ) {
+    return false;
+  }
+
+  if (
+    typeof movimentacao.descricao !== "string" ||
+    movimentacao.descricao.trim() === ""
+  ) {
+    return false;
+  }
+
+  if (!categoriasValidas.includes(movimentacao.categoria)) {
+    return false;
+  }
+
+  if (
+    typeof movimentacao.data !== "string" ||
+    movimentacao.data.trim() === ""
+  ) {
+    return false;
+  }
+
+  return true;
 }
 
 function iniciarAplicacao() {
