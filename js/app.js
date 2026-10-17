@@ -67,6 +67,8 @@ function listarMovimentacoes() {
   }));
 }
 
+function renderizarMovimentacoes(movimentacoes) {}
+
 //Configura o comportamento do formulário de cadastro de movimentações.
 function configurarFormularioMovimentacao() {
   const formulario = document.querySelector("#form-movimentacao");
