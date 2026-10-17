@@ -26,6 +26,10 @@ const novaMovimentacao = {
 };
 
 const CHAVE_MOVIMENTACOES = "nailflow_movimentacoes";
+const formatadorMoeda = new Intl.NumberFormat("pt-BR", {
+  style: "currency",
+  currency: "BRL",
+});
 let movimentacoes = [movimentacaoEntrada, movimentacaoSaida];
 
 function adicionarMovimentacao(movimentacao) {
@@ -67,7 +71,30 @@ function listarMovimentacoes() {
   }));
 }
 
-function renderizarMovimentacoes(movimentacoes) {}
+function renderizarMovimentacoes(movimentacoes) {
+  const lista = document.querySelector("#lista-movimentacoes");
+  lista.replaceChildren();
+
+  if (movimentacoes.length === 0) {
+    const itemVazio = document.createElement("li");
+    itemVazio.textContent = "Nenhuma movimentação salva.";
+    lista.append(itemVazio);
+    return;
+  }
+
+  movimentacoes.forEach((movimentacao) => {
+    const item = document.createElement("li");
+    item.textContent = [
+      `Tipo: ${movimentacao.tipo}`,
+      `Descrição: ${movimentacao.descricao}`,
+      `Valor: ${formatadorMoeda.format(movimentacao.valor)}`,
+      `Categoria: ${movimentacao.categoria}`,
+      `Data: ${movimentacao.data}`,
+    ].join(" | ");
+
+    lista.append(item);
+  });
+}
 
 //Configura o comportamento do formulário de cadastro de movimentações.
 function configurarFormularioMovimentacao() {
@@ -169,6 +196,10 @@ function calcularIndicadoresFinanceiros(movimentacoes) {
 }
 function iniciarAplicacao() {
   carregarMovimentacoes();
+  document.addEventListener("movimentacoes:atualizadas", (event) => {
+    renderizarMovimentacoes(event.detail);
+  });
+  renderizarMovimentacoes(listarMovimentacoes());
   configurarFormularioMovimentacao();
 }
 
