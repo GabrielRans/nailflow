@@ -140,6 +140,7 @@ function validarMovimentacao(movimentacao) {
 function calcularIndicadoresFinanceiros(movimentacoes) {
   let totalEntradas = 0;
   let totalSaidas = 0;
+  let quantidadeEntradas = 0;
 
   if (!Array.isArray(movimentacoes)) {
     return {
@@ -152,6 +153,7 @@ function calcularIndicadoresFinanceiros(movimentacoes) {
   for (const movimentacao of movimentacoes) {
     if (movimentacao.tipo === "entrada") {
         totalEntradas += movimentacao.valor;
+        quantidadeEntradas++;
       } else if (movimentacao.tipo === "saida") {
       totalSaidas += movimentacao.valor;
     }
