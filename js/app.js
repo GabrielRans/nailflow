@@ -175,7 +175,8 @@ function calcularIndicadoresFinanceiros(movimentacoes) {
     return {
       totalEntradas: 0,
       totalSaidas: 0,
-      saldo: 0
+      saldo: 0,
+      ticketMedio: 0
     };
   }
 
@@ -189,11 +190,15 @@ function calcularIndicadoresFinanceiros(movimentacoes) {
   }
 
   const saldo = totalEntradas - totalSaidas;
+  const ticketMedio = quantidadeEntradas > 0
+    ?  totalEntradas / quantidadeEntradas
+    : ticketMedio = 0;
 
   return {
     totalEntradas,
     totalSaidas,
-    saldo
+    saldo,
+    ticketMedio
   };
 }
 function iniciarAplicacao() {
