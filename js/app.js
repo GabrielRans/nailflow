@@ -169,29 +169,36 @@ function validarMovimentacao(movimentacao) {
 function calcularIndicadoresFinanceiros(movimentacoes) {
   let totalEntradas = 0;
   let totalSaidas = 0;
+  let quantidadeEntradas = 0;
 
   if (!Array.isArray(movimentacoes)) {
     return {
       totalEntradas: 0,
       totalSaidas: 0,
-      saldo: 0
+      saldo: 0,
+      ticketMedio: 0
     };
   }
 
   for (const movimentacao of movimentacoes) {
     if (movimentacao.tipo === "entrada") {
         totalEntradas += movimentacao.valor;
+        quantidadeEntradas++;
       } else if (movimentacao.tipo === "saida") {
       totalSaidas += movimentacao.valor;
     }
   }
 
   const saldo = totalEntradas - totalSaidas;
+  const ticketMedio = quantidadeEntradas > 0
+    ?  totalEntradas / quantidadeEntradas
+    : ticketMedio = 0;
 
   return {
     totalEntradas,
     totalSaidas,
-    saldo
+    saldo,
+    ticketMedio
   };
 }
 function iniciarAplicacao() {
