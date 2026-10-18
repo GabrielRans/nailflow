@@ -68,6 +68,20 @@ function listarMovimentacoes() {
   }));
 }
 
+function filtrarMovimentacoesPorPeriodo(dataInicial, dataFinal) {
+  const movimentacoesFiltradas = movimentacoes.filter((movimentacao) => {
+    const atendeDataInicial =
+    !dataInicial || movimentacao.data >= dataInicial;
+
+    const atendeDataFinal =
+    !dataFinal || movimentacao.data <= dataFinal;
+
+    return atendeDataInicial && atendeDataFinal;
+  });
+
+  return movimentacoesFiltradas;
+}
+
 //Configura o comportamento do formulário de cadastro de movimentações.
 function configurarFormularioMovimentacao() {
   const formulario = document.querySelector("#form-movimentacao");
