@@ -84,13 +84,35 @@ function renderizarMovimentacoes(movimentacoes) {
 
   movimentacoes.forEach((movimentacao) => {
     const item = document.createElement("li");
-    item.textContent = [
-      `Tipo: ${movimentacao.tipo}`,
-      `Descrição: ${movimentacao.descricao}`,
-      `Valor: ${formatadorMoeda.format(movimentacao.valor)}`,
-      `Categoria: ${movimentacao.categoria}`,
-      `Data: ${movimentacao.data}`,
-    ].join(" | ");
+    const ehReceita = movimentacao.tipo === "entrada";
+    item.className = `movimentacao movimentacao--${ehReceita ? "receita" : "despesa"}`;
+
+    const tipo = document.createElement("span");
+    tipo.className = "movimentacao__tipo";
+    tipo.textContent = ehReceita ? "Receita" : "Despesa";
+
+    const indicador = document.createElement("span");
+    indicador.className = "movimentacao__indicador";
+    indicador.setAttribute("aria-hidden", "true");
+    indicador.textContent = ehReceita ? "↑" : "↓";
+
+    const conteudo = document.createElement("div");
+    conteudo.className = "movimentacao__conteudo";
+
+    const descricao = document.createElement("p");
+    descricao.className = "movimentacao__descricao";
+    descricao.textContent = movimentacao.descricao;
+
+    const detalhes = document.createElement("p");
+    detalhes.className = "movimentacao__detalhes";
+    detalhes.textContent = `${movimentacao.categoria} • ${movimentacao.data}`;
+    conteudo.append(descricao, detalhes);
+
+    const valor = document.createElement("strong");
+    valor.className = "movimentacao__valor";
+    valor.textContent = formatadorMoeda.format(movimentacao.valor);
+
+    item.append(tipo, indicador, conteudo, valor);
 
     lista.append(item);
   });
