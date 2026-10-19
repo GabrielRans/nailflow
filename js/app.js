@@ -26,10 +26,7 @@ const novaMovimentacao = {
 };
 
 const CHAVE_MOVIMENTACOES = "nailflow_movimentacoes";
-const formatadorMoeda = new Intl.NumberFormat("pt-BR", {
-  style: "currency",
-  currency: "BRL",
-});
+
 let movimentacoes = [movimentacaoEntrada, movimentacaoSaida];
 
 function adicionarMovimentacao(movimentacao) {
@@ -69,53 +66,6 @@ function listarMovimentacoes() {
   return movimentacoes.map((movimentacao) => ({
     ...movimentacao,
   }));
-}
-
-function renderizarMovimentacoes(movimentacoes) {
-  const lista = document.querySelector("#lista-movimentacoes");
-  lista.replaceChildren();
-
-  if (movimentacoes.length === 0) {
-    const itemVazio = document.createElement("li");
-    itemVazio.textContent = "Nenhuma movimentação salva.";
-    lista.append(itemVazio);
-    return;
-  }
-
-  movimentacoes.forEach((movimentacao) => {
-    const item = document.createElement("li");
-    const ehReceita = movimentacao.tipo === "entrada";
-    item.className = `movimentacao movimentacao--${ehReceita ? "receita" : "despesa"}`;
-
-    const tipo = document.createElement("span");
-    tipo.className = "movimentacao__tipo";
-    tipo.textContent = ehReceita ? "Receita" : "Despesa";
-
-    const indicador = document.createElement("span");
-    indicador.className = "movimentacao__indicador";
-    indicador.setAttribute("aria-hidden", "true");
-    indicador.textContent = ehReceita ? "↑" : "↓";
-
-    const conteudo = document.createElement("div");
-    conteudo.className = "movimentacao__conteudo";
-
-    const descricao = document.createElement("p");
-    descricao.className = "movimentacao__descricao";
-    descricao.textContent = movimentacao.descricao;
-
-    const detalhes = document.createElement("p");
-    detalhes.className = "movimentacao__detalhes";
-    detalhes.textContent = `${movimentacao.categoria} • ${movimentacao.data}`;
-    conteudo.append(descricao, detalhes);
-
-    const valor = document.createElement("strong");
-    valor.className = "movimentacao__valor";
-    valor.textContent = formatadorMoeda.format(movimentacao.valor);
-
-    item.append(tipo, indicador, conteudo, valor);
-
-    lista.append(item);
-  });
 }
 
 //Configura o comportamento do formulário de cadastro de movimentações.
@@ -187,12 +137,45 @@ function validarMovimentacao(movimentacao) {
   return true;
 }
 
+//Calcula os indicadores financeiros a partir das movimentações cadastradas.
+function calcularIndicadoresFinanceiros(movimentacoes) {
+  let totalEntradas = 0;
+  let totalSaidas = 0;
+  let quantidadeEntradas = 0;
+
+  if (!Array.isArray(movimentacoes)) {
+    return {
+      totalEntradas: 0,
+      totalSaidas: 0,
+      saldo: 0,
+      ticketMedio: 0
+    };
+  }
+
+  for (const movimentacao of movimentacoes) {
+    if (movimentacao.tipo === "entrada") {
+        totalEntradas += movimentacao.valor;
+        quantidadeEntradas++;
+      } else if (movimentacao.tipo === "saida") {
+      totalSaidas += movimentacao.valor;
+    }
+  }
+
+  const saldo = totalEntradas - totalSaidas;
+
+  const ticketMedio = quantidadeEntradas > 0
+    ?  totalEntradas / quantidadeEntradas
+    : 0;
+
+  return {
+    totalEntradas,
+    totalSaidas,
+    saldo,
+    ticketMedio
+  };
+}
 function iniciarAplicacao() {
   carregarMovimentacoes();
-  document.addEventListener("movimentacoes:atualizadas", (event) => {
-    renderizarMovimentacoes(event.detail);
-  });
-  renderizarMovimentacoes(listarMovimentacoes());
   configurarFormularioMovimentacao();
 }
 
