@@ -4,6 +4,35 @@ const formatadorMoeda = new Intl.NumberFormat("pt-BR", {
   currency: "BRL",
 });
 
+const campoDataInicial = document.querySelector("#filtro-data-inicial");
+const campoDataFinal = document.querySelector("#filtro-data-final");
+const botaoFiltrar = document.querySelector("#btn-filtrar-periodo");
+const botaoLimparFiltro = document.querySelector("#btn-limpar-filtro");
+
+botaoFiltrar.addEventListener("click", () => {
+  const dataInicial = campoDataInicial.value;
+  const dataFinal = campoDataFinal.value;
+
+  if (dataInicial && dataFinal && dataInicial > dataFinal) {
+    alert("A data incial não pode ser posterior à data final.");
+    return;
+  }
+
+  const movimentacoesFiltradas = filtrarMovimentacoesPorPeriodo(
+    dataInicial,
+    dataFinal
+  );
+
+  renderizarMovimentacoes(movimentacoesFiltradas);
+});
+
+botaoLimparFiltro.addEventListener("click", () => {
+    campoDataInicial.value = "",
+    campoDataFinal.value = ""
+
+  renderizarMovimentacoes(listarMovimentacoes());
+});
+
 // Renderiza na interface as movimentações recebidas.
 function renderizarMovimentacoes(movimentacoes) {
   const lista = document.querySelector("#lista-movimentacoes");
