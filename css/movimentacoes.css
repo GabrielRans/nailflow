@@ -6,6 +6,20 @@
   list-style: none;
 }
 
+.movimentacoes-vazio {
+  padding: 20px 16px;
+  border: 1px dashed #cdd0d5;
+  border-radius: 10px;
+  background: #f8fafc;
+  color: #374151;
+  text-align: center;
+}
+
+.movimentacoes-vazio p {
+  margin: 6px 0 0;
+  color: #5c6672;
+}
+
 .movimentacao {
   display: grid;
   grid-template-columns: 52px minmax(0, 1fr) auto;
