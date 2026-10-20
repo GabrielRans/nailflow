@@ -27,8 +27,8 @@ botaoFiltrar.addEventListener("click", () => {
 });
 
 botaoLimparFiltro.addEventListener("click", () => {
-    campoDataInicial.value = "",
-    campoDataFinal.value = ""
+    campoDataInicial.value = "";
+    campoDataFinal.value = "";
 
   renderizarMovimentacoes(listarMovimentacoes());
 });

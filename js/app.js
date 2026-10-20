@@ -41,6 +41,14 @@ function listarMovimentacoes() {
   }));
 }
 
+function buscarMovimentacaoPorId(id) {
+  const movimentacaoEncontrada = movimentacoes.find((movimentacao) => {
+    return movimentacao.id === id;
+  });
+
+  return movimentacaoEncontrada;
+}
+
 function filtrarMovimentacoesPorPeriodo(dataInicial, dataFinal) {
   const movimentacoesFiltradas = movimentacoes.filter((movimentacao) => {
     const atendeDataInicial =
