@@ -40,7 +40,24 @@ function renderizarMovimentacoes(movimentacoes) {
 
     const detalhes = document.createElement("p");
     detalhes.className = "movimentacao__detalhes";
-    detalhes.textContent = `${movimentacao.categoria} • ${movimentacao.data}`;
+    detalhes.setAttribute(
+      "aria-label",
+      `${movimentacao.categoria} • ${movimentacao.data}`
+    );
+
+    const categoria = document.createElement("span");
+    categoria.className = "movimentacao__categoria";
+    categoria.textContent = movimentacao.categoria;
+
+    const separador = document.createElement("span");
+    separador.setAttribute("aria-hidden", "true");
+    separador.textContent = "•";
+
+    const data = document.createElement("span");
+    data.className = "movimentacao__data";
+    data.textContent = movimentacao.data;
+
+    detalhes.append(categoria, separador, data);
     conteudo.append(descricao, detalhes);
 
     const valor = document.createElement("strong");
