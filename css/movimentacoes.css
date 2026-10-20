@@ -1,0 +1,74 @@
+#lista-movimentacoes {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.movimentacao {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid #cdd0d5;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.movimentacao__tipo {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  clip-path: inset(50%);
+}
+
+.movimentacao__indicador {
+  display: grid;
+  width: 52px;
+  height: 52px;
+  place-items: center;
+  border-radius: 50%;
+  background: #e5e6e8;
+  color: #111;
+  font-size: 1.75rem;
+  line-height: 1;
+}
+
+.movimentacao__conteudo {
+  min-width: 0;
+}
+
+.movimentacao__valor {
+  align-self: start;
+  margin-top: 4px;
+  white-space: nowrap;
+}
+
+.movimentacao__descricao {
+  margin: 0 0 4px;
+  font-weight: 600;
+}
+
+.movimentacao__detalhes {
+  margin: 0;
+  color: #5c6672;
+  font-size: 0.875rem;
+}
+
+@media (max-width: 420px) {
+  .movimentacao {
+    grid-template-columns: 44px minmax(0, 1fr) auto;
+    gap: 10px;
+    padding: 12px;
+  }
+
+  .movimentacao__indicador {
+    width: 44px;
+    height: 44px;
+  }
+}
