@@ -7,12 +7,11 @@
 }
 
 .movimentacoes-vazio {
-  padding: 20px 16px;
-  border: 1px dashed #cdd0d5;
+  padding: 16px;
+  border: 1px solid #cdd0d5;
   border-radius: 10px;
-  background: #f8fafc;
-  color: #374151;
-  text-align: center;
+  background: #fff;
+  color: #111;
 }
 
 .movimentacoes-vazio p {
