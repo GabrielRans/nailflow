@@ -12,7 +12,16 @@ function renderizarMovimentacoes(movimentacoes) {
 
   if (movimentacoes.length === 0) {
     const itemVazio = document.createElement("li");
-    itemVazio.textContent = "Nenhuma movimentação salva.";
+    itemVazio.className = "movimentacoes-vazio";
+    itemVazio.setAttribute("role", "status");
+
+    const tituloVazio = document.createElement("strong");
+    tituloVazio.textContent = "Nenhuma movimentação cadastrada";
+
+    const mensagemVazia = document.createElement("p");
+    mensagemVazia.textContent = "Cadastre uma receita ou despesa para começar.";
+
+    itemVazio.append(tituloVazio, mensagemVazia);
     lista.append(itemVazio);
     return;
   }

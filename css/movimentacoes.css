@@ -7,6 +7,19 @@
   list-style: none;
 }
 
+.movimentacoes-vazio {
+  padding: 16px;
+  border: 1px solid #cdd0d5;
+  border-radius: 10px;
+  background: #fff;
+  color: #111;
+}
+
+.movimentacoes-vazio p {
+  margin: 6px 0 0;
+  color: #5c6672;
+}
+
 .movimentacao {
   display: grid;
   grid-template-columns: 52px minmax(0, 1fr) auto;
