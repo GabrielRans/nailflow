@@ -8,6 +8,8 @@ const campoDataInicial = document.querySelector("#filtro-data-inicial");
 const campoDataFinal = document.querySelector("#filtro-data-final");
 const botaoFiltrar = document.querySelector("#btn-filtrar-periodo");
 const botaoLimparFiltro = document.querySelector("#btn-limpar-filtro");
+const formularioMovimentacao = document.querySelector("#form-movimentacao");
+const campoIdMovimentacao = document.querySelector("#movimentacao-id");
 
 botaoFiltrar.addEventListener("click", () => {
   const dataInicial = campoDataInicial.value;
@@ -76,7 +78,25 @@ function renderizarMovimentacoes(movimentacoes) {
     valor.className = "movimentacao__valor";
     valor.textContent = formatadorMoeda.format(movimentacao.valor);
 
-    item.append(tipo, indicador, conteudo, valor);
+    const botaoEditar = document.createElement("button");
+    botaoEditar.type = "button";
+    botaoEditar.textContent = "Editar";
+    botaoEditar.className = "movimentacao__editar";
+
+    botaoEditar.addEventListener("click", () => {
+      const movimentacaoSelecionada = buscarMovimentacaoPorId(movimentacao.id);
+
+      campoIdMovimentacao.value = movimentacaoSelecionada.id;
+
+      formularioMovimentacao.elements.tipo.value = movimentacaoSelecionada.tipo;
+      formularioMovimentacao.elements.valor.value = movimentacaoSelecionada.valor;
+      formularioMovimentacao.elements.descricao.value = movimentacaoSelecionada.descricao;
+      formularioMovimentacao.elements.categoria.value = movimentacaoSelecionada.categoria;
+      formularioMovimentacao.elements.data.value = movimentacaoSelecionada.data;
+      formularioMovimentacao.elements.observacao.value = movimentacaoSelecionada.observacao;
+    });
+
+    item.append(tipo, indicador, conteudo, valor, botaoEditar);
 
     lista.append(item);
   });

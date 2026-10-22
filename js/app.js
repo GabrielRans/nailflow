@@ -49,6 +49,31 @@ function buscarMovimentacaoPorId(id) {
   return movimentacaoEncontrada;
 }
 
+function atualizarMovimentacao(id, dadosAtualizados) {
+  const indice = movimentacoes.findIndex((movimentacao) => {
+    return movimentacao.id === id;
+  });
+
+  if (indice === -1) {
+    return false;
+  }
+
+  movimentacoes[indice] = {
+    ...dadosAtualizados,
+    id
+  };
+
+  salvarMovimentacoes();
+
+  document.dispatchEvent(
+    new CustomEvent("movimentacoes:atualizadas", {
+      detail: listarMovimentacoes(),
+    })
+  );
+
+  return true;
+}
+
 function filtrarMovimentacoesPorPeriodo(dataInicial, dataFinal) {
   const movimentacoesFiltradas = movimentacoes.filter((movimentacao) => {
     const atendeDataInicial =
@@ -67,13 +92,14 @@ function filtrarMovimentacoesPorPeriodo(dataInicial, dataFinal) {
 function configurarFormularioMovimentacao() {
   const formulario = document.querySelector("#form-movimentacao");
 
-   formulario.addEventListener("submit", function (event) {
+  formulario.addEventListener("submit", function (event) {
     event.preventDefault();
 
     const dadosFormulario = new FormData(formulario);
 
+    const idMovimentacao = dadosFormulario.get("id");
+
     const movimentacao = {
-      id: crypto.randomUUID(),
       tipo: dadosFormulario.get("tipo"),
       valor: Number(dadosFormulario.get("valor")),
       descricao: dadosFormulario.get("descricao"),
@@ -82,9 +108,23 @@ function configurarFormularioMovimentacao() {
       observacao: dadosFormulario.get("observacao")
     };
 
-    const movimentacaoAdicionada = adicionarMovimentacao(movimentacao);
+    let movimentacaoSalva;
 
-    if (movimentacaoAdicionada) {
+    if (idMovimentacao) {
+      movimentacaoSalva = atualizarMovimentacao(
+        idMovimentacao,
+        movimentacao
+      );
+    } else {
+      const novaMovimentacao = {
+        ...movimentacao,
+        id: crypto.randomUUID()
+      };
+
+      movimentacaoSalva = adicionarMovimentacao(novaMovimentacao);
+    }
+
+    if (movimentacaoSalva) {
       formulario.reset();
     }
   });
