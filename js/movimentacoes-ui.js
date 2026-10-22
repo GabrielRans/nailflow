@@ -146,6 +146,18 @@ function renderizarMovimentacoes(movimentacoes) {
       `Excluir movimentação: ${movimentacao.descricao}`
     );
 
+    botaoExcluir.addEventListener("click", () => {
+      const confirmou = confirm(
+        "Deseja realmente excluir esta movimentação?"
+      );
+
+      if (!confirmou) {
+        return;
+      }
+
+      ExcluirMovimentacao(movimentacao.id);
+    });
+
     acoes.append(botaoEditar, botaoExcluir);
     lateral.append(acoes);
     item.append(tipo, indicador, conteudo, lateral);

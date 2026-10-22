@@ -74,6 +74,28 @@ function atualizarMovimentacao(id, dadosAtualizados) {
   return true;
 }
 
+function ExcluirMovimentacao(id) {
+  const indice = movimentacoes.findIndex((movimentacao) => {
+    return movimentacao.id === id;
+  });
+
+  if (indice === -1) {
+    return false;
+  }
+
+  movimentacoes.splice(indice, 1);
+
+  salvarMovimentacoes();
+
+  document.dispatchEvent(
+    new CustomEvent("movimentacoes:atualizadas", {
+      detail: listarMovimentacoes(),
+    })
+  );
+
+  return true;
+}
+
 function filtrarMovimentacoesPorPeriodo(dataInicial, dataFinal) {
   const movimentacoesFiltradas = movimentacoes.filter((movimentacao) => {
     const atendeDataInicial =
