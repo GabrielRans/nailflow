@@ -73,7 +73,34 @@ function renderizarMovimentacoes(movimentacoes) {
     valor.className = "movimentacao__valor";
     valor.textContent = formatadorMoeda.format(movimentacao.valor);
 
-    item.append(tipo, indicador, conteudo, valor);
+    const lateral = document.createElement("div");
+    lateral.className = "movimentacao__lateral";
+    lateral.append(valor);
+
+    const acoes = document.createElement("div");
+    acoes.className = "movimentacao__acoes";
+
+    const botaoEditar = document.createElement("button");
+    botaoEditar.type = "button";
+    botaoEditar.className = "movimentacao__acao";
+    botaoEditar.textContent = "Editar";
+    botaoEditar.setAttribute(
+      "aria-label",
+      `Editar movimentação: ${movimentacao.descricao}`
+    );
+
+    const botaoExcluir = document.createElement("button");
+    botaoExcluir.type = "button";
+    botaoExcluir.className = "movimentacao__acao";
+    botaoExcluir.textContent = "Excluir";
+    botaoExcluir.setAttribute(
+      "aria-label",
+      `Excluir movimentação: ${movimentacao.descricao}`
+    );
+
+    acoes.append(botaoEditar, botaoExcluir);
+    lateral.append(acoes);
+    item.append(tipo, indicador, conteudo, lateral);
 
     lista.append(item);
   });
