@@ -43,7 +43,16 @@ function renderizarMovimentacoes(movimentacoes) {
 
   if (movimentacoes.length === 0) {
     const itemVazio = document.createElement("li");
-    itemVazio.textContent = "Nenhuma movimentação salva.";
+    itemVazio.className = "movimentacoes-vazio";
+    itemVazio.setAttribute("role", "status");
+
+    const tituloVazio = document.createElement("strong");
+    tituloVazio.textContent = "Nenhuma movimentação cadastrada";
+
+    const mensagemVazia = document.createElement("p");
+    mensagemVazia.textContent = "Cadastre uma receita ou despesa para começar.";
+
+    itemVazio.append(tituloVazio, mensagemVazia);
     lista.append(itemVazio);
     return;
   }
@@ -71,20 +80,52 @@ function renderizarMovimentacoes(movimentacoes) {
 
     const detalhes = document.createElement("p");
     detalhes.className = "movimentacao__detalhes";
-    detalhes.textContent = `${movimentacao.categoria} • ${movimentacao.data}`;
+    detalhes.setAttribute(
+      "aria-label",
+      `${movimentacao.categoria} • ${movimentacao.data}`
+    );
+
+    const categoria = document.createElement("span");
+    categoria.className = "movimentacao__categoria";
+    categoria.textContent = movimentacao.categoria;
+
+    const separador = document.createElement("span");
+    separador.setAttribute("aria-hidden", "true");
+    separador.textContent = "•";
+
+    const data = document.createElement("span");
+    data.className = "movimentacao__data";
+    data.textContent = movimentacao.data;
+
+    detalhes.append(categoria, separador, data);
     conteudo.append(descricao, detalhes);
 
     const valor = document.createElement("strong");
     valor.className = "movimentacao__valor";
     valor.textContent = formatadorMoeda.format(movimentacao.valor);
 
+    const lateral = document.createElement("div");
+    lateral.className = "movimentacao__lateral";
+    lateral.append(valor);
+
+    const acoes = document.createElement("div");
+    acoes.className = "movimentacao__acoes";
+
     const botaoEditar = document.createElement("button");
     botaoEditar.type = "button";
+    botaoEditar.className = "movimentacao__acao";
     botaoEditar.textContent = "Editar";
-    botaoEditar.className = "movimentacao__editar";
+    botaoEditar.setAttribute(
+      "aria-label",
+      `Editar movimentação: ${movimentacao.descricao}`
+    );
 
     botaoEditar.addEventListener("click", () => {
       const movimentacaoSelecionada = buscarMovimentacaoPorId(movimentacao.id);
+
+      if (!movimentacaoSelecionada) {
+        return;
+      }
 
       campoIdMovimentacao.value = movimentacaoSelecionada.id;
 
@@ -93,10 +134,21 @@ function renderizarMovimentacoes(movimentacoes) {
       formularioMovimentacao.elements.descricao.value = movimentacaoSelecionada.descricao;
       formularioMovimentacao.elements.categoria.value = movimentacaoSelecionada.categoria;
       formularioMovimentacao.elements.data.value = movimentacaoSelecionada.data;
-      formularioMovimentacao.elements.observacao.value = movimentacaoSelecionada.observacao;
+      formularioMovimentacao.elements.observacao.value = movimentacaoSelecionada.observacao ?? "";
     });
 
-    item.append(tipo, indicador, conteudo, valor, botaoEditar);
+    const botaoExcluir = document.createElement("button");
+    botaoExcluir.type = "button";
+    botaoExcluir.className = "movimentacao__acao";
+    botaoExcluir.textContent = "Excluir";
+    botaoExcluir.setAttribute(
+      "aria-label",
+      `Excluir movimentação: ${movimentacao.descricao}`
+    );
+
+    acoes.append(botaoEditar, botaoExcluir);
+    lateral.append(acoes);
+    item.append(tipo, indicador, conteudo, lateral);
 
     lista.append(item);
   });
