@@ -1,33 +1,6 @@
-const movimentacaoEntrada = {
-  tipo: "entrada",
-  valor: 120,
-  descricao: "alongamento em gel",
-  categoria: "procedimento",
-  data: "2026-10-09",
-  observacao: ""
-};
-
-const movimentacaoSaida = {
-  tipo: "saida",
-  valor: 50,
-  descricao: "unhas postiças",
-  categoria: "material",
-  data: "2026-10-10",
-  observacao: ""
-};
-
-const novaMovimentacao = {
-  tipo: "entrada",
-  valor: 35,
-  descricao: "Nail Design",
-  categoria: "serviço",
-  data: "2026-10-10",
-  observacao: ""
-};
-
 const CHAVE_MOVIMENTACOES = "nailflow_movimentacoes";
 
-let movimentacoes = [movimentacaoEntrada, movimentacaoSaida];
+let movimentacoes = [];
 
 function adicionarMovimentacao(movimentacao) {
   if (!validarMovimentacao(movimentacao)) {
@@ -68,17 +41,87 @@ function listarMovimentacoes() {
   }));
 }
 
+function buscarMovimentacaoPorId(id) {
+  const movimentacaoEncontrada = movimentacoes.find((movimentacao) => {
+    return movimentacao.id === id;
+  });
+
+  return movimentacaoEncontrada;
+}
+
+function atualizarMovimentacao(id, dadosAtualizados) {
+  const indice = movimentacoes.findIndex((movimentacao) => {
+    return movimentacao.id === id;
+  });
+
+  if (indice === -1) {
+    return false;
+  }
+
+  movimentacoes[indice] = {
+    ...dadosAtualizados,
+    id
+  };
+
+  salvarMovimentacoes();
+
+  document.dispatchEvent(
+    new CustomEvent("movimentacoes:atualizadas", {
+      detail: listarMovimentacoes(),
+    })
+  );
+
+  return true;
+}
+
+function ExcluirMovimentacao(id) {
+  const indice = movimentacoes.findIndex((movimentacao) => {
+    return movimentacao.id === id;
+  });
+
+  if (indice === -1) {
+    return false;
+  }
+
+  movimentacoes.splice(indice, 1);
+
+  salvarMovimentacoes();
+
+  document.dispatchEvent(
+    new CustomEvent("movimentacoes:atualizadas", {
+      detail: listarMovimentacoes(),
+    })
+  );
+
+  return true;
+}
+
+function filtrarMovimentacoesPorPeriodo(dataInicial, dataFinal) {
+  const movimentacoesFiltradas = movimentacoes.filter((movimentacao) => {
+    const atendeDataInicial =
+    !dataInicial || movimentacao.data >= dataInicial;
+
+    const atendeDataFinal =
+    !dataFinal || movimentacao.data <= dataFinal;
+
+    return atendeDataInicial && atendeDataFinal;
+  });
+
+  return movimentacoesFiltradas;
+}
+
 //Configura o comportamento do formulário de cadastro de movimentações.
 function configurarFormularioMovimentacao() {
   const formulario = document.querySelector("#form-movimentacao");
 
-   formulario.addEventListener("submit", function (event) {
+  formulario.addEventListener("submit", function (event) {
     event.preventDefault();
 
     const dadosFormulario = new FormData(formulario);
 
+    const idMovimentacao = dadosFormulario.get("id");
+
     const movimentacao = {
-      id: crypto.randomUUID(),
       tipo: dadosFormulario.get("tipo"),
       valor: Number(dadosFormulario.get("valor")),
       descricao: dadosFormulario.get("descricao"),
@@ -87,9 +130,23 @@ function configurarFormularioMovimentacao() {
       observacao: dadosFormulario.get("observacao")
     };
 
-    const movimentacaoAdicionada = adicionarMovimentacao(movimentacao);
+    let movimentacaoSalva;
 
-    if (movimentacaoAdicionada) {
+    if (idMovimentacao) {
+      movimentacaoSalva = atualizarMovimentacao(
+        idMovimentacao,
+        movimentacao
+      );
+    } else {
+      const novaMovimentacao = {
+        ...movimentacao,
+        id: crypto.randomUUID()
+      };
+
+      movimentacaoSalva = adicionarMovimentacao(novaMovimentacao);
+    }
+
+    if (movimentacaoSalva) {
       formulario.reset();
     }
   });

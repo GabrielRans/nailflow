@@ -19,6 +19,7 @@
           <h2>Nova movimentação</h2>
 
           <form id="form-movimentacao">
+            <input type="hidden" id="movimentacao-id" name="id">
             <div>
               <label for="tipo">Tipo</label>
               <select id="tipo" name="tipo" required>
@@ -89,6 +90,21 @@
 
         <section>
           <h2>Movimentações salvas</h2>
+          <div class="filtros-movimentacoes">
+            <label for="filtro-data-inicial">Data Inicial</label>
+            <input type="date" id="filtro-data-inicial">
+
+            <label for="filtro-data-final">Data Final</label>
+            <input type="date" id="filtro-data-final">
+
+            <button type="button" id="btn-filtrar-periodo">
+              Filtrar
+            </button>
+
+            <button type="button" id="btn-limpar-filtro">
+              Limpar filtro
+            </button>
+          </div>
           <ul id="lista-movimentacoes"></ul>
         </section>
       </main>

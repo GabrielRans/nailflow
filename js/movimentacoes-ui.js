@@ -4,6 +4,37 @@ const formatadorMoeda = new Intl.NumberFormat("pt-BR", {
   currency: "BRL",
 });
 
+const campoDataInicial = document.querySelector("#filtro-data-inicial");
+const campoDataFinal = document.querySelector("#filtro-data-final");
+const botaoFiltrar = document.querySelector("#btn-filtrar-periodo");
+const botaoLimparFiltro = document.querySelector("#btn-limpar-filtro");
+const formularioMovimentacao = document.querySelector("#form-movimentacao");
+const campoIdMovimentacao = document.querySelector("#movimentacao-id");
+
+botaoFiltrar.addEventListener("click", () => {
+  const dataInicial = campoDataInicial.value;
+  const dataFinal = campoDataFinal.value;
+
+  if (dataInicial && dataFinal && dataInicial > dataFinal) {
+    alert("A data incial não pode ser posterior à data final.");
+    return;
+  }
+
+  const movimentacoesFiltradas = filtrarMovimentacoesPorPeriodo(
+    dataInicial,
+    dataFinal
+  );
+
+  renderizarMovimentacoes(movimentacoesFiltradas);
+});
+
+botaoLimparFiltro.addEventListener("click", () => {
+    campoDataInicial.value = "";
+    campoDataFinal.value = "";
+
+  renderizarMovimentacoes(listarMovimentacoes());
+});
+
 // Renderiza na interface as movimentações recebidas.
 function renderizarMovimentacoes(movimentacoes) {
   const lista = document.querySelector("#lista-movimentacoes");
@@ -89,6 +120,23 @@ function renderizarMovimentacoes(movimentacoes) {
       `Editar movimentação: ${movimentacao.descricao}`
     );
 
+    botaoEditar.addEventListener("click", () => {
+      const movimentacaoSelecionada = buscarMovimentacaoPorId(movimentacao.id);
+
+      if (!movimentacaoSelecionada) {
+        return;
+      }
+
+      campoIdMovimentacao.value = movimentacaoSelecionada.id;
+
+      formularioMovimentacao.elements.tipo.value = movimentacaoSelecionada.tipo;
+      formularioMovimentacao.elements.valor.value = movimentacaoSelecionada.valor;
+      formularioMovimentacao.elements.descricao.value = movimentacaoSelecionada.descricao;
+      formularioMovimentacao.elements.categoria.value = movimentacaoSelecionada.categoria;
+      formularioMovimentacao.elements.data.value = movimentacaoSelecionada.data;
+      formularioMovimentacao.elements.observacao.value = movimentacaoSelecionada.observacao ?? "";
+    });
+
     const botaoExcluir = document.createElement("button");
     botaoExcluir.type = "button";
     botaoExcluir.className = "movimentacao__acao";
@@ -97,6 +145,18 @@ function renderizarMovimentacoes(movimentacoes) {
       "aria-label",
       `Excluir movimentação: ${movimentacao.descricao}`
     );
+
+    botaoExcluir.addEventListener("click", () => {
+      const confirmou = confirm(
+        "Deseja realmente excluir esta movimentação?"
+      );
+
+      if (!confirmou) {
+        return;
+      }
+
+      ExcluirMovimentacao(movimentacao.id);
+    });
 
     acoes.append(botaoEditar, botaoExcluir);
     lateral.append(acoes);
