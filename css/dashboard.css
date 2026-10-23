@@ -1,0 +1,66 @@
+.dashboard {
+  margin-bottom: 32px;
+}
+
+.dashboard__indicadores {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dashboard__card {
+  min-width: 0;
+  padding: 20px;
+  border: 1px solid #cdd0d5;
+  border-left: 4px solid #6b7280;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.dashboard__card--receitas {
+  border-left-color: #15803d;
+}
+
+.dashboard__card--despesas {
+  border-left-color: #b42318;
+}
+
+.dashboard__card--saldo {
+  border-left-color: #4f46e5;
+}
+
+.dashboard__card-titulo {
+  margin: 0 0 12px;
+  color: #5c6672;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.dashboard__card-valor {
+  margin: 0;
+  color: #111;
+  font-size: clamp(1.25rem, 4vw, 1.75rem);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.dashboard__estado {
+  margin: 12px 0 0;
+  color: #5c6672;
+  font-size: 0.875rem;
+}
+
+@media (max-width: 600px) {
+  .dashboard__indicadores {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+  }
+
+  .dashboard__card {
+    padding: 16px;
+  }
+}
