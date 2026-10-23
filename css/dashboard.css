@@ -1,0 +1,146 @@
+.dashboard {
+  --dashboard-border: #d9deea;
+  --dashboard-muted: #525f72;
+  margin-bottom: 32px;
+  padding: clamp(18px, 4vw, 28px);
+  border: 1px solid #e4e8f0;
+  border-radius: 18px;
+  background: #f5f7fc;
+}
+
+.dashboard > h2 {
+  margin: 0 0 18px;
+  color: #172554;
+  font-size: clamp(1.25rem, 3vw, 1.5rem);
+  line-height: 1.25;
+  letter-spacing: -0.025em;
+}
+
+.dashboard__indicadores {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dashboard__card {
+  min-width: 0;
+  padding: clamp(16px, 3vw, 22px);
+  border: 1px solid var(--dashboard-border);
+  border-top: 4px solid #64748b;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 2px 8px rgb(23 37 84 / 5%);
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.dashboard__card:hover {
+  border-inline-color: #c4ccda;
+  border-bottom-color: #c4ccda;
+  box-shadow: 0 6px 16px rgb(23 37 84 / 8%);
+}
+
+.dashboard__card--receitas {
+  border-top-color: #15803d;
+}
+
+.dashboard__card--despesas {
+  border-top-color: #b42318;
+}
+
+.dashboard__card--saldo {
+  border-top-color: #4f46e5;
+}
+
+.dashboard__card--ticket {
+  border-top-color: #0e7490;
+}
+
+.dashboard__card-titulo {
+  margin: 0 0 10px;
+  color: var(--dashboard-muted);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.dashboard__card-valor {
+  min-width: 0;
+  margin: 0;
+  color: #172554;
+  font-size: clamp(1rem, 3.4vw, 1.5rem);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.dashboard__card--receitas .dashboard__card-valor {
+  color: #166534;
+}
+
+.dashboard__card--despesas .dashboard__card-valor {
+  color: #b42318;
+}
+
+.dashboard__card--saldo .dashboard__card-valor {
+  color: #4338ca;
+}
+
+.dashboard__card--ticket .dashboard__card-valor {
+  color: #0e7490;
+}
+
+.dashboard__estado {
+  margin: 16px 0 0;
+  color: var(--dashboard-muted);
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+@media (max-width: 480px) {
+  .dashboard {
+    padding: 16px;
+    border-radius: 14px;
+  }
+
+  .dashboard__indicadores {
+    gap: 12px;
+  }
+
+  .dashboard__card {
+    padding: 15px 13px;
+    border-radius: 12px;
+  }
+
+  .dashboard__card-titulo {
+    margin-bottom: 8px;
+    font-size: 0.875rem;
+  }
+
+  .dashboard__card-valor {
+    font-size: clamp(0.9375rem, 4.5vw, 1.125rem);
+  }
+}
+
+@media (max-width: 340px) {
+  .dashboard {
+    padding: 12px;
+  }
+
+  .dashboard__indicadores {
+    gap: 10px;
+  }
+
+  .dashboard__card {
+    padding: 13px 10px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dashboard__card {
+    transition: none;
+  }
+}

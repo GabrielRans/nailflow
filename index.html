@@ -6,15 +6,43 @@
     <title>NailFlow</title>
 
     <link rel="stylesheet" href="./css/style.css">
+    <link rel="stylesheet" href="./css/dashboard.css">
+    <link rel="stylesheet" href="./css/movimentacao-form.css">
     <link rel="stylesheet" href="./css/movimentacoes.css">
     <script src="./js/app.js" defer></script>
     <script src="./js/movimentacoes-ui.js" defer></script>
   </head>
   <body>
-
       <h1>NailFlow</h1>
 
       <main>
+        <section class="dashboard" aria-labelledby="dashboard-titulo">
+          <h2 id="dashboard-titulo">Resumo financeiro</h2>
+
+          <ul class="dashboard__indicadores">
+            <li class="dashboard__card dashboard__card--receitas">
+              <h3 class="dashboard__card-titulo">Receitas</h3>
+              <p class="dashboard__card-valor" data-indicador="totalEntradas">—</p>
+            </li>
+            <li class="dashboard__card dashboard__card--despesas">
+              <h3 class="dashboard__card-titulo">Despesas</h3>
+              <p class="dashboard__card-valor" data-indicador="totalSaidas">—</p>
+            </li>
+            <li class="dashboard__card dashboard__card--saldo">
+              <h3 class="dashboard__card-titulo">Saldo</h3>
+              <p class="dashboard__card-valor" data-indicador="saldo">—</p>
+            </li>
+            <li class="dashboard__card dashboard__card--ticket">
+              <h3 class="dashboard__card-titulo">Ticket médio</h3>
+              <p class="dashboard__card-valor" data-indicador="ticketMedio">—</p>
+            </li>
+          </ul>
+
+          <p class="dashboard__estado" role="status">
+            Os valores serão exibidos após a integração dos indicadores financeiros.
+          </p>
+        </section>
+
         <section>
           <h2>Nova movimentação</h2>
 
