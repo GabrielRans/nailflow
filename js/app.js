@@ -198,7 +198,8 @@ function validarMovimentacao(movimentacao) {
 function calcularIndicadoresFinanceiros(movimentacoes) {
   let totalEntradas = 0;
   let totalSaidas = 0;
-  let quantidadeEntradas = 0;
+  let totalAtendimentos = 0;
+  let quantidadeAtendimentos = 0;
 
   if (!Array.isArray(movimentacoes)) {
     return {
@@ -212,16 +213,23 @@ function calcularIndicadoresFinanceiros(movimentacoes) {
   for (const movimentacao of movimentacoes) {
     if (movimentacao.tipo === "entrada") {
         totalEntradas += movimentacao.valor;
-        quantidadeEntradas++;
-      } else if (movimentacao.tipo === "saida") {
+
+      if (
+        movimentacao.categoria === "procedimento" ||
+        movimentacao.categoria === "servico"
+      ) {
+        totalAtendimentos += movimentacao.valor;
+        quantidadeAtendimentos++;
+      }
+    } else if (movimentacao.tipo === "saida") {
       totalSaidas += movimentacao.valor;
     }
   }
 
   const saldo = totalEntradas - totalSaidas;
 
-  const ticketMedio = quantidadeEntradas > 0
-    ?  totalEntradas / quantidadeEntradas
+  const ticketMedio = quantidadeAtendimentos > 0
+    ?  totalAtendimentos / quantidadeAtendimentos
     : 0;
 
   return {
