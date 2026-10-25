@@ -4,6 +4,24 @@ const formatarIndicadores = new Intl.NumberFormat("pt-BR", {
     currency: "BRL",
 });
 
+function obterMovimentacoesDoMesAtual() {
+    const hoje = new Date();
+
+    const ano = hoje.getFullYear();
+    const mes = String(hoje.getMonth() + 1).padStart(2, "0");
+
+    const UltimoDia = new Date(
+        ano,
+        hoje.getMonth() + 1,
+        0
+    ).getDate();
+
+    const dataInicial = `${ano}-${mes}-01`;
+    const dataFinal = `${ano}-${mes}-${String(UltimoDia).padStart(2, "0")}`;
+
+    return filtrarMovimentacoesPorPeriodo(dataInicial, dataFinal);
+}
+
 //Atualiza os valores exibidos nos cards do Dashboard
 function renderizarIndicadoresFinanceiros(movimentacoes) {
     const indicadores = calcularIndicadoresFinanceiros(movimentacoes);
@@ -25,7 +43,7 @@ function renderizarIndicadoresFinanceiros(movimentacoes) {
     if (estadoDashboard) {
         const semMovimentacoes = movimentacoes.length === 0;
         estadoDashboard.textContent =  semMovimentacoes
-        ? "Nenhuma movimentação cadastrada. Registre uma entrada ou saída para começar."
+        ? "Nenhuma movimentação registrada neste mês."
         : "";
 
         estadoDashboard.hidden = !semMovimentacoes;
@@ -34,10 +52,10 @@ function renderizarIndicadoresFinanceiros(movimentacoes) {
 
 //Renderiza os indicadores após o carregamento das movimentações
 document.addEventListener("DOMContentLoaded", () =>{
-    renderizarIndicadoresFinanceiros(listarMovimentacoes());
+    renderizarIndicadoresFinanceiros(obterMovimentacoesDoMesAtual());
 });
 
 //Atualiza os indicadores quando uma movimentação é cadastrada, editada ou excluida...
 document.addEventListener("movimentacoes:atualizadas", (event) => {
-    renderizarIndicadoresFinanceiros(event.detail);
+    renderizarIndicadoresFinanceiros(obterMovimentacoesDoMesAtual());
 });
