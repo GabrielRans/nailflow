@@ -159,7 +159,7 @@ function validarMovimentacao(movimentacao) {
   }
 
   const tiposValidos = ["entrada", "saida"];
-  const categoriasValidas = ["procedimento", "material", "servico", "outro"];
+  const categoriasValidas = ["atendimento", "material", "outro"];
 
   if (!tiposValidos.includes(movimentacao.tipo)) {
     return false;
@@ -214,13 +214,10 @@ function calcularIndicadoresFinanceiros(movimentacoes) {
     if (movimentacao.tipo === "entrada") {
         totalEntradas += movimentacao.valor;
 
-      if (
-        movimentacao.categoria === "procedimento" ||
-        movimentacao.categoria === "servico"
-      ) {
-        totalAtendimentos += movimentacao.valor;
-        quantidadeAtendimentos++;
-      }
+        if (movimentacao.categoria === "atendimento") {
+            totalAtendimentos += movimentacao.valor;
+            quantidadeAtendimentos++;
+          }
     } else if (movimentacao.tipo === "saida") {
       totalSaidas += movimentacao.valor;
     }
