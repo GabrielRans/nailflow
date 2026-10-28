@@ -10,6 +10,7 @@ const botaoFiltrar = document.querySelector("#btn-filtrar-periodo");
 const botaoLimparFiltro = document.querySelector("#btn-limpar-filtro");
 const formularioMovimentacao = document.querySelector("#form-movimentacao");
 const campoIdMovimentacao = document.querySelector("#movimentacao-id");
+const mensagemErroFinanceiro = document.querySelector("#financeiro-erro");
 
 botaoFiltrar.addEventListener("click", () => {
   const dataInicial = campoDataInicial.value;
@@ -124,8 +125,13 @@ function renderizarMovimentacoes(movimentacoes) {
       const movimentacaoSelecionada = buscarMovimentacaoPorId(movimentacao.id);
 
       if (!movimentacaoSelecionada) {
+        mensagemErroFinanceiro.textContent =
+          "Não foi possível editar esta movimentação. O registro não foi encontrado.";
+
         return;
       }
+
+      mensagemErroFinanceiro.textContent = "";
 
       campoIdMovimentacao.value = movimentacaoSelecionada.id;
 
@@ -142,7 +148,7 @@ function renderizarMovimentacoes(movimentacoes) {
       formularioMovimentacao.elements.observacao.value =
         movimentacaoSelecionada.observacao ?? "";
 
-      navegarParaEdicao();
+      navegarParaEdicao(botaoEditar);
     });
 
     const botaoExcluir = document.createElement("button");

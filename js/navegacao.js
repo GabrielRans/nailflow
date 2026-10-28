@@ -7,6 +7,8 @@ const ROTAS_VALIDAS = new Set([
 ]);
 
 let focoEdicaoPendente = false;
+let botaoOrigemEdicao = null;
+let rotaAnterior = null;
 
 function obterRotaAtual() {
     const rota = window.location.hash.slice(1);
@@ -42,16 +44,42 @@ function atualizarNavegacao(gerenciarFocoAtivo = true) {
         }
     });
 
-    const modoEdicao = rota === "movimentacao" && focoEdicaoPendente;
+    const modoEdicao =
+        rota === "movimentacao" && focoEdicaoPendente;
+
+    const retornandoDaEdicao =
+        rotaAnterior === "movimentacao" &&
+        rota === "financeiro" &&
+        botaoOrigemEdicao !== null;
+
+    const origemDisponivel =
+        retornandoDaEdicao &&
+        botaoOrigemEdicao.isConnected &&
+        !botaoOrigemEdicao.disabled;
 
     focoEdicaoPendente = false;
 
     if (gerenciarFocoAtivo) {
-        gerenciarFoco(rota, modoEdicao);
+        if (origemDisponivel) {
+            botaoOrigemEdicao.focus();
+            botaoOrigemEdicao.scrollIntoView({
+                behavior: "auto",
+                block: "nearest"
+            });
+        }  else {
+            gerenciarFoco(rota, modoEdicao);
+        }
     }
+
+    if (retornandoDaEdicao || rota !== "movimentacao") {
+        botaoOrigemEdicao = null;
+    }
+
+    rotaAnterior = rota;
 }
 
-function navegarParaEdicao() {
+function navegarParaEdicao(botaoOrigem) {
+    botaoOrigemEdicao = botaoOrigem;
     focoEdicaoPendente = true;
 
     if (window.location.hash !== "#movimentacao") {
