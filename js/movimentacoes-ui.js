@@ -10,6 +10,7 @@ const botaoFiltrar = document.querySelector("#btn-filtrar-periodo");
 const botaoLimparFiltro = document.querySelector("#btn-limpar-filtro");
 const formularioMovimentacao = document.querySelector("#form-movimentacao");
 const campoIdMovimentacao = document.querySelector("#movimentacao-id");
+const mensagemErroFinanceiro = document.querySelector("#financeiro-erro");
 
 botaoFiltrar.addEventListener("click", () => {
   const dataInicial = campoDataInicial.value;
@@ -124,17 +125,30 @@ function renderizarMovimentacoes(movimentacoes) {
       const movimentacaoSelecionada = buscarMovimentacaoPorId(movimentacao.id);
 
       if (!movimentacaoSelecionada) {
+        mensagemErroFinanceiro.textContent =
+          "Não foi possível editar esta movimentação. O registro não foi encontrado.";
+
         return;
       }
 
+      mensagemErroFinanceiro.textContent = "";
+
       campoIdMovimentacao.value = movimentacaoSelecionada.id;
 
-      formularioMovimentacao.elements.tipo.value = movimentacaoSelecionada.tipo;
-      formularioMovimentacao.elements.valor.value = movimentacaoSelecionada.valor;
-      formularioMovimentacao.elements.descricao.value = movimentacaoSelecionada.descricao;
-      formularioMovimentacao.elements.categoria.value = movimentacaoSelecionada.categoria;
-      formularioMovimentacao.elements.data.value = movimentacaoSelecionada.data;
-      formularioMovimentacao.elements.observacao.value = movimentacaoSelecionada.observacao ?? "";
+      formularioMovimentacao.elements.tipo.value =
+        movimentacaoSelecionada.tipo;
+      formularioMovimentacao.elements.valor.value =
+        movimentacaoSelecionada.valor;
+      formularioMovimentacao.elements.descricao.value =
+        movimentacaoSelecionada.descricao;
+      formularioMovimentacao.elements.categoria.value =
+        movimentacaoSelecionada.categoria;
+      formularioMovimentacao.elements.data.value =
+        movimentacaoSelecionada.data;
+      formularioMovimentacao.elements.observacao.value =
+        movimentacaoSelecionada.observacao ?? "";
+
+      navegarParaEdicao(botaoEditar);
     });
 
     const botaoExcluir = document.createElement("button");
