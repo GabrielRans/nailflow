@@ -30,3 +30,7 @@ button {
   font: inherit;
   padding: 10px;
 }
+
+[hidden] {
+  display: none !important;
+}

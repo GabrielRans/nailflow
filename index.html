@@ -12,40 +12,62 @@
     <script src="./js/app.js" defer></script>
     <script src="./js/movimentacoes-ui.js" defer></script>
     <script src="./js/dashboard-ui.js" defer></script>
+    <script src="./js/navegacao.js" defer></script>
   </head>
   <body>
       <h1>NailFlow</h1>
 
+      <nav aria-label="Navegação principal">
+        <a href="#dashboard" data-rota="dashboard">Dashboard</a>
+        <a href="#financeiro" data-rota="financeiro">Financeiro</a>
+        <a href="#materiais" data-rota="materiais">Materiais</a>
+      </nav>
+
       <main>
-        <section class="dashboard" aria-labelledby="dashboard-titulo">
-          <h2 id="dashboard-titulo">Resumo financeiro</h2>
+        <section
+          data-tela="dashboard"
+          aria-labelledby="dashboard-titulo"
+        >
+          <div class="dashboard">
+            <h2 id="dashboard-titulo" tabindex="-1">
+              Resumo financeiro
+            </h2>
 
-          <ul class="dashboard__indicadores">
-            <li class="dashboard__card dashboard__card--receitas">
-              <h3 class="dashboard__card-titulo">Receitas</h3>
-              <p class="dashboard__card-valor" data-indicador="totalEntradas">—</p>
-            </li>
-            <li class="dashboard__card dashboard__card--despesas">
-              <h3 class="dashboard__card-titulo">Despesas</h3>
-              <p class="dashboard__card-valor" data-indicador="totalSaidas">—</p>
-            </li>
-            <li class="dashboard__card dashboard__card--saldo">
-              <h3 class="dashboard__card-titulo">Saldo</h3>
-              <p class="dashboard__card-valor" data-indicador="saldo">—</p>
-            </li>
-            <li class="dashboard__card dashboard__card--ticket">
-              <h3 class="dashboard__card-titulo">Ticket médio</h3>
-              <p class="dashboard__card-valor" data-indicador="ticketMedio">—</p>
-            </li>
-          </ul>
+            <ul class="dashboard__indicadores">
+              <li class="dashboard__card dashboard__card--receitas">
+                <h3 class="dashboard__card-titulo">Receitas</h3>
+                <p class="dashboard__card-valor" data-indicador="totalEntradas">—</p>
+              </li>
+              <li class="dashboard__card dashboard__card--despesas">
+                <h3 class="dashboard__card-titulo">Despesas</h3>
+                <p class="dashboard__card-valor" data-indicador="totalSaidas">—</p>
+              </li>
+              <li class="dashboard__card dashboard__card--saldo">
+                <h3 class="dashboard__card-titulo">Saldo</h3>
+                <p class="dashboard__card-valor" data-indicador="saldo">—</p>
+              </li>
+              <li class="dashboard__card dashboard__card--ticket">
+                <h3 class="dashboard__card-titulo">Ticket médio</h3>
+                <p class="dashboard__card-valor" data-indicador="ticketMedio">—</p>
+              </li>
+            </ul>
 
-          <p class="dashboard__estado" role="status">
-            Os valores serão exibidos após a integração dos indicadores financeiros.
-          </p>
+            <p class="dashboard__estado" role="status">
+              Os valores serão exibidos após a integração dos indicadores financeiros.
+            </p>
+
+          </div>
+
+          <a href="#movimentacao">Nova movimentação</a>
         </section>
 
-        <section>
-          <h2>Nova movimentação</h2>
+        <section
+          data-tela="movimentacao"
+          aria-labelledby="movimentacao-titulo"
+        >
+          <h2 id="movimentacao-titulo" tabindex="-1">
+            Nova movimentação
+          </h2>
 
           <form id="form-movimentacao">
             <input type="hidden" id="movimentacao-id" name="id">
@@ -116,8 +138,16 @@
           </form>
         </section>
 
-        <section>
-          <h2>Movimentações salvas</h2>
+        <section
+          data-tela="financeiro"
+          aria-labelledby="financeiro-titulo"
+        >
+          <h2 id="financeiro-titulo" tabindex="-1">
+            Movimentações salvas
+          </h2>
+
+          <a href="#movimentacao">Nova movimentação</a>
+
           <div class="filtros-movimentacoes">
             <label for="filtro-data-inicial">Data Inicial</label>
             <input type="date" id="filtro-data-inicial">
@@ -134,6 +164,27 @@
             </button>
           </div>
           <ul id="lista-movimentacoes"></ul>
+        </section>
+
+        <section data-tela="materiais" aria-labelledby="materiais-titulo">
+          <h2 id="materiais-titulo" tabindex="-1">Materiais</h2>
+
+          <p>O controle de materiais está em desenvolvimento.</p>
+
+          <a href="#cadastro-material">Cadastrar material</a>
+        </section>
+
+        <section
+          data-tela="cadastro-material"
+          aria-labelledby="cadastro-material-titulo"
+        >
+          <h2 id="cadastro-material-titulo" tabindex="-1">
+            Cadastro de materiais
+          </h2>
+
+          <p>Cadastro de materiais - em desenvolvimento.</p>
+
+          <a href="#materiais">Voltar para Materiais</a>
         </section>
       </main>
   </body>
