@@ -1,15 +1,24 @@
+/* ========================================
+   FORMULÁRIO DE MOVIMENTAÇÃO (F03)
+   Identidade visual: Modelo B
+======================================== */
+
 #form-movimentacao {
+  display: grid;
   gap: 18px;
+  max-width: 100%;
 }
 
 #form-movimentacao > div {
+  display: grid;
   gap: 7px;
 }
 
 #form-movimentacao label {
-  color: #263449;
+  color: #26364D;
   font-size: 0.9375rem;
   font-weight: 600;
+  line-height: 1.25;
 }
 
 #form-movimentacao input,
@@ -18,10 +27,19 @@
   width: 100%;
   min-height: 48px;
   padding: 11px 13px;
-  border: 1px solid #7b8798;
-  border-radius: 10px;
-  background: #fff;
-  color: #172554;
+  border: 1px solid #CBD5E1;
+  border-radius: 8px;
+  background-color: #FFFFFF;
+  color: #26364D;
+  font-family: inherit;
+  font-size: 1rem;
+  box-sizing: border-box;
+}
+
+/* Ajuste específico para selects (Categoria e Tipo) no mobile */
+#form-movimentacao select {
+  padding-right: 36px;
+  cursor: pointer;
 }
 
 #form-movimentacao textarea {
@@ -31,46 +49,56 @@
 
 #form-movimentacao input::placeholder,
 #form-movimentacao textarea::placeholder {
-  color: #596579;
+  color: #667085;
 }
 
 #form-movimentacao input:focus-visible,
 #form-movimentacao select:focus-visible,
 #form-movimentacao textarea:focus-visible {
-  border-color: #4338ca;
-  outline: 3px solid #4338ca;
+  border-color: #7C435C;
+  outline: 3px solid #7C435C;
   outline-offset: 2px;
 }
 
+/* Botão primário oficial — Ameixa (Modelo B) */
 #form-movimentacao button[type="submit"] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   min-height: 48px;
-  padding: 12px 18px;
-  border: 1px solid #3730a3;
-  border-radius: 10px;
-  background: #4338ca;
-  color: #fff;
-  font-weight: 700;
+  padding: 12px 20px;
+  border: 1px solid #7C435C;
+  border-radius: 8px;
+  background-color: #7C435C;
+  color: #FFFFFF;
+  font-family: inherit;
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.2;
   cursor: pointer;
-  transition: background-color 160ms ease, box-shadow 160ms ease;
+  box-sizing: border-box;
+  transition: background-color 150ms ease, border-color 150ms ease;
 }
 
 #form-movimentacao button[type="submit"]:hover {
-  background: #3730a3;
+  background-color: #63344A;
+  border-color: #63344A;
 }
 
 #form-movimentacao button[type="submit"]:active {
-  background: #312e81;
+  background-color: #522B3D;
+  border-color: #522B3D;
 }
 
 #form-movimentacao button[type="submit"]:disabled {
-  border-color: #aab4c3;
-  background: #e2e8f0;
-  color: #475569;
+  border-color: #CBD5E1;
+  background-color: #E2E8F0;
+  color: #667085;
   cursor: not-allowed;
 }
 
 #form-movimentacao button[type="submit"]:focus-visible {
-  outline: 3px solid #4338ca;
+  outline: 3px solid #7C435C;
   outline-offset: 3px;
 }
 
