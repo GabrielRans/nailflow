@@ -2,7 +2,7 @@
  * Módulo de domínio para cadastro e controle de materiais.
  *
  * Contrato do repositório (objeto injetado nas operações):
- * - adicionar(material): Promise<void> — persiste o material (já contém id)
+ * - salvar(material): Promise<void> — persiste o material (já contém id)
  * - listar(): Promise<Material[]> — retorna cópia da lista de materiais
  * - atualizarQuantidade(id, quantidade): Promise<Material | null | undefined>
  *     Retorna o material atualizado em sucesso;
@@ -58,7 +58,7 @@ function validarMaterial(dados) {
             dados: null,
             erro: {
                 codigo: "MINIMO_INVALIDO",
-                mensagem: "Quantidade mínima inválida para o material."
+                mensagem: "Informe uma quantidade mínima válida para o material."
             }
         };
     }
@@ -114,7 +114,7 @@ async function adicionarMaterial(dados, repositorio) {
                 mensagem: "Não foi possível salvar o material."
             }
         };
-    };
+    }
 }
 
 async function listarMateriais(repositorio) {
@@ -180,7 +180,7 @@ async function atualizarQuantidadeMaterial(id, quantidade, repositorio) {
                 dados: null,
                 erro: {
                     codigo: "MATERIAL_NAO_ENCONTRADO",
-                    mensagem: "Material não encontrado"
+                    mensagem: "Material não encontrado."
                 }
             };
         }
@@ -226,7 +226,7 @@ async function buscarMaterialPorId(id, repositorio) {
                 dados: null,
                 erro: {
                     codigo: "MATERIAL_NAO_ENCONTRADO",
-                    mensagem: "Material não encontrado"
+                    mensagem: "Material não encontrado."
                 }
             };
         }

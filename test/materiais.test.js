@@ -1,23 +1,14 @@
-import { describe, it, beforeEach } from "node:test";
-import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
-import { createContext, runInContext } from "node:vm";
-import { webcrypto } from "node:crypto";
+const { describe, it, beforeEach } = require("node:test");
+const assert = require("node:assert/strict");
 
-// Carrega o módulo de negócio via vm (scripts clássicos no navegador)
-const codigo = readFileSync("./js/materiais.js", "utf8");
-const contexto = createContext({ crypto: webcrypto });
-runInContext(codigo, contexto);
-
+// Carrega o módulo de negócio via require (CommonJS)
 const {
   validarMaterial,
   adicionarMaterial,
   listarMateriais,
   atualizarQuantidadeMaterial,
   buscarMaterialPorId
-} = runInContext(`
-  ({ validarMaterial, adicionarMaterial, listarMateriais, atualizarQuantidadeMaterial, buscarMaterialPorId })
-`, contexto);
+} = require("../js/materiais.js");
 
 // Factory de repositório limpo por teste
 function criarRepositorio() {
@@ -112,19 +103,19 @@ describe("validarMaterial", () => {
   it("rejeita quantidadeMinima negativa", () => {
     const r = validarMaterial({ ...dadosValidos(), quantidadeMinima: -1 });
     assert.equal(r.erro.codigo, "MINIMO_INVALIDO");
-    assert.equal(r.erro.mensagem, "Quantidade mínima inválida para o material.");
+    assert.equal(r.erro.mensagem, "Informe uma quantidade mínima válida para o material.");
   });
 
   it("rejeita quantidadeMinima NaN", () => {
     const r = validarMaterial({ ...dadosValidos(), quantidadeMinima: NaN });
     assert.equal(r.erro.codigo, "MINIMO_INVALIDO");
-    assert.equal(r.erro.mensagem, "Quantidade mínima inválida para o material.");
+    assert.equal(r.erro.mensagem, "Informe uma quantidade mínima válida para o material.");
   });
 
   it("rejeita quantidadeMinima não-número", () => {
     const r = validarMaterial({ ...dadosValidos(), quantidadeMinima: "10" });
     assert.equal(r.erro.codigo, "MINIMO_INVALIDO");
-    assert.equal(r.erro.mensagem, "Quantidade mínima inválida para o material.");
+    assert.equal(r.erro.mensagem, "Informe uma quantidade mínima válida para o material.");
   });
 
   it("rejeita unidade vazia", () => {
@@ -207,7 +198,7 @@ describe("adicionarMaterial", () => {
   it("rejeita quantidadeMinima inválida", async () => {
     const r = await adicionarMaterial({ ...dadosValidos(), quantidadeMinima: -1 }, repo);
     assert.equal(r.erro.codigo, "MINIMO_INVALIDO");
-    assert.equal(r.erro.mensagem, "Quantidade mínima inválida para o material.");
+    assert.equal(r.erro.mensagem, "Informe uma quantidade mínima válida para o material.");
     assert.equal(repo.materiais.length, 0);
   });
 
@@ -347,7 +338,7 @@ describe("atualizarQuantidadeMaterial", () => {
   it("rejeita material inexistente", async () => {
     const r = await atualizarQuantidadeMaterial("id-inexistente", 10, repo);
     assert.equal(r.erro.codigo, "MATERIAL_NAO_ENCONTRADO");
-    assert.equal(r.erro.mensagem, "Material não encontrado");
+    assert.equal(r.erro.mensagem, "Material não encontrado.");
   });
 
   it("trata retorno undefined do repositório como material não encontrado", async () => {
@@ -360,7 +351,7 @@ describe("atualizarQuantidadeMaterial", () => {
     assert.equal(r.sucesso, false);
     assert.equal(r.dados, null);
     assert.equal(r.erro.codigo, "MATERIAL_NAO_ENCONTRADO");
-    assert.equal(r.erro.mensagem, "Material não encontrado");
+    assert.equal(r.erro.mensagem, "Material não encontrado.");
   });
 
   it("trata falha de atualização", async () => {
@@ -405,7 +396,7 @@ describe("buscarMaterialPorId", () => {
     assert.equal(r.sucesso, false);
     assert.equal(r.dados, null);
     assert.equal(r.erro.codigo, "MATERIAL_NAO_ENCONTRADO");
-    assert.equal(r.erro.mensagem, "Material não encontrado");
+    assert.equal(r.erro.mensagem, "Material não encontrado.");
   });
 
   it("rejeita ID vazio", async () => {
