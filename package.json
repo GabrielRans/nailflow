@@ -1,0 +1,26 @@
+{
+  "name": "nailflow",
+  "version": "1.0.0",
+  "description": "Aplicação web desenvolvida para auxiliar na gestão financeira e no controle de materiais de um empreendimento de Nail Art.",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs",
+    "test": "test"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/GabrielRans/nailflow.git"
+  },
+  "keywords": [],
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/GabrielRans/nailflow/issues"
+  },
+  "homepage": "https://github.com/GabrielRans/nailflow#readme",
+  "dependencies": {
+    "playwright": "^1.65.0"
+  }
+}
