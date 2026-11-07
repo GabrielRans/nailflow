@@ -5,12 +5,16 @@
 body {
   margin: 0;
   font-family: Arial, sans-serif;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
 
 main {
   max-width: 720px;
   margin: 0 auto;
   padding: 32px 20px;
+  flex: 1;
 }
 
 form {
@@ -33,4 +37,235 @@ button {
 
 [hidden] {
   display: none !important;
+}
+
+/* =============================================================================
+   NAVEGAÇÃO COM BOTÃO LOGOUT
+   ============================================================================= */
+nav[aria-label="Navegação principal"] {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 20px;
+  max-width: 720px;
+  margin: 0 auto;
+  border-bottom: 1px solid #e4e8f0;
+}
+
+nav a[data-rota] {
+  text-decoration: none;
+  color: #4338ca;
+  font-weight: 600;
+  padding: 8px 12px;
+  border-radius: 8px;
+  transition: background-color 160ms ease;
+}
+
+nav a[data-rota]:hover {
+  background-color: #eff6ff;
+}
+
+nav a[data-rota][aria-current="page"] {
+  background-color: #4338ca;
+  color: #fff;
+}
+
+.nav-logout {
+  margin-left: auto;
+  padding: 8px 16px;
+  border: 1px solid #b91c1c;
+  border-radius: 8px;
+  background: #fef2f2;
+  color: #991b1b;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 160ms ease, border-color 160ms ease;
+}
+
+.nav-logout:hover {
+  background: #fee2e2;
+  border-color: #991b1b;
+}
+
+.nav-logout:focus-visible {
+  outline: 3px solid #4338ca;
+  outline-offset: 2px;
+}
+
+/* =============================================================================
+   TELA DE LOGIN
+   ============================================================================= */
+.tela-login {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: linear-gradient(135deg, #f5f7fc 0%, #e8ecf4 100%);
+}
+
+.login-container {
+  width: 100%;
+  max-width: 400px;
+  padding: 40px 32px;
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 4px 24px rgb(23 37 84 / 10%);
+  text-align: center;
+}
+
+.login-container h2 {
+  margin: 0 0 8px;
+  color: #172554;
+  font-size: 1.75rem;
+  font-weight: 700;
+}
+
+.login-subtitulo {
+  margin: 0 0 32px;
+  color: #525f72;
+  font-size: 1rem;
+}
+
+.btn-login-google {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 52px;
+  padding: 12px 24px;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  background: #fff;
+  color: #172554;
+  font-weight: 600;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background-color 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.btn-login-google:hover {
+  background: #f8fafc;
+  border-color: #94a3b8;
+  box-shadow: 0 2px 8px rgb(15 23 42 / 10%);
+}
+
+.btn-login-google:active {
+  background: #f1f5f9;
+}
+
+.btn-login-google:focus-visible {
+  outline: 3px solid #4338ca;
+  outline-offset: 2px;
+}
+
+.btn-login-google:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.google-icon {
+  flex-shrink: 0;
+}
+
+.login-erro {
+  margin: 16px 0 0;
+  padding: 12px;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  background: #fef2f2;
+  color: #991b1b;
+  font-size: 0.875rem;
+  text-align: left;
+}
+
+/* =============================================================================
+   ESTADO DE CARREGAMENTO INICIAL (evita flash de conteúdo não autenticado)
+   ============================================================================= */
+.auth-carregando {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f5f7fc;
+}
+
+.auth-carregando::after {
+  content: "";
+  width: 32px;
+  height: 32px;
+  border: 3px solid #cbd5e1;
+  border-top-color: #4338ca;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* =============================================================================
+   ESTADOS DE CARREGAMENTO (UI Assíncrona)
+   ============================================================================= */
+.movimentacoes-carregando {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  color: #525f72;
+  gap: 12px;
+}
+
+.movimentacoes-carregando .spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid #cbd5e1;
+  border-top-color: #4338ca;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+.dashboard [data-indicador].carregando {
+  color: #94a3b8;
+  position: relative;
+}
+
+.dashboard [data-indicador].carregando::after {
+  content: "";
+  position: absolute;
+  right: -28px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 16px;
+  border: 2px solid #cbd5e1;
+  border-top-color: #4338ca;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+/* Responsividade */
+@media (max-width: 480px) {
+  nav[aria-label="Navegação principal"] {
+    padding: 12px 16px;
+    gap: 8px;
+  }
+
+  nav a[data-rota] {
+    padding: 6px 10px;
+    font-size: 0.875rem;
+  }
+
+  .nav-logout {
+    padding: 6px 12px;
+    font-size: 0.875rem;
+  }
+
+  .login-container {
+    padding: 32px 24px;
+    margin: 16px;
+  }
 }

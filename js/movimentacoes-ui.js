@@ -1,3 +1,8 @@
+/**
+ * UI de Movimentações - NailFlow
+ * Usa API assíncrona do módulo financeiro com estados de carregamento
+ */
+
 // Formata valores monetários para o padrão brasileiro.
 const formatadorMoeda = new Intl.NumberFormat("pt-BR", {
   style: "currency",
@@ -11,36 +16,33 @@ const botaoLimparFiltro = document.querySelector("#btn-limpar-filtro");
 const formularioMovimentacao = document.querySelector("#form-movimentacao");
 const campoIdMovimentacao = document.querySelector("#movimentacao-id");
 const mensagemErroFinanceiro = document.querySelector("#financeiro-erro");
+const listaMovimentacoes = document.querySelector("#lista-movimentacoes");
 
-botaoFiltrar.addEventListener("click", () => {
-  const dataInicial = campoDataInicial.value;
-  const dataFinal = campoDataFinal.value;
+// Estado de loading
+let carregando = false;
 
-  if (dataInicial && dataFinal && dataInicial > dataFinal) {
-    alert("A data incial não pode ser posterior à data final.");
-    return;
+/**
+ * Mostra/esconde estado de carregamento na lista
+ * @param {boolean} mostrar
+ */
+function setCarregando(mostrar) {
+  carregando = mostrar;
+  if (mostrar) {
+    listaMovimentacoes.innerHTML = `
+      <li class="movimentacoes-carregando" role="status" aria-live="polite">
+        <div class="spinner" aria-hidden="true"></div>
+        <span>Carregando movimentações...</span>
+      </li>
+    `;
   }
+}
 
-  const movimentacoesFiltradas = filtrarMovimentacoesPorPeriodo(
-    dataInicial,
-    dataFinal
-  );
-
-  renderizarMovimentacoes(movimentacoesFiltradas);
-});
-
-botaoLimparFiltro.addEventListener("click", () => {
-    campoDataInicial.value = "";
-    campoDataFinal.value = "";
-
-  renderizarMovimentacoes(listarMovimentacoes());
-});
-
-// Renderiza na interface as movimentações recebidas.
+/**
+ * Renderiza na interface as movimentações recebidas.
+ * @param {Array} movimentacoes
+ */
 function renderizarMovimentacoes(movimentacoes) {
-  const lista = document.querySelector("#lista-movimentacoes");
-
-  lista.replaceChildren();
+  listaMovimentacoes.replaceChildren();
 
   if (movimentacoes.length === 0) {
     const itemVazio = document.createElement("li");
@@ -54,7 +56,7 @@ function renderizarMovimentacoes(movimentacoes) {
     mensagemVazia.textContent = "Cadastre uma receita ou despesa para começar.";
 
     itemVazio.append(tituloVazio, mensagemVazia);
-    lista.append(itemVazio);
+    listaMovimentacoes.append(itemVazio);
     return;
   }
 
@@ -122,12 +124,12 @@ function renderizarMovimentacoes(movimentacoes) {
     );
 
     botaoEditar.addEventListener("click", () => {
-      const movimentacaoSelecionada = buscarMovimentacaoPorId(movimentacao.id);
+      // Usa cache síncrono para edição imediata (UX responsiva)
+      const movimentacaoSelecionada = window.NailFlow?.financeiro?.buscarMovimentacaoPorId?.(movimentacao.id);
 
       if (!movimentacaoSelecionada) {
         mensagemErroFinanceiro.textContent =
           "Não foi possível editar esta movimentação. O registro não foi encontrado.";
-
         return;
       }
 
@@ -160,32 +162,109 @@ function renderizarMovimentacoes(movimentacoes) {
       `Excluir movimentação: ${movimentacao.descricao}`
     );
 
-    botaoExcluir.addEventListener("click", () => {
+    botaoExcluir.addEventListener("click", async () => {
       const confirmou = confirm(
         "Deseja realmente excluir esta movimentação?"
       );
 
-      if (!confirmou) {
-        return;
-      }
+      if (!confirmou) return;
 
-      ExcluirMovimentacao(movimentacao.id);
+      botaoExcluir.disabled = true;
+      botaoExcluir.textContent = "Excluindo...";
+
+      try {
+        const ok = await window.NailFlow.financeiro.excluirMovimentacaoAsync(movimentacao.id);
+        if (!ok) {
+          alert("Erro ao excluir movimentação. Tente novamente.");
+          botaoExcluir.disabled = false;
+          botaoExcluir.textContent = "Excluir";
+        }
+        // Evento 'movimentacoes:atualizadas' disparará renderização automática
+      } catch (err) {
+        console.error('[UI] Erro ao excluir:', err);
+        alert("Erro ao excluir movimentação.");
+        botaoExcluir.disabled = false;
+        botaoExcluir.textContent = "Excluir";
+      }
     });
 
     acoes.append(botaoEditar, botaoExcluir);
     lateral.append(acoes);
     item.append(tipo, indicador, conteudo, lateral);
 
-    lista.append(item);
+    listaMovimentacoes.append(item);
   });
 }
 
-// Atualiza a interface sempre que o estado das movimentações mudar.
-document.addEventListener("movimentacoes:atualizadas", (event) => {
-  renderizarMovimentacoes(event.detail);
+/**
+ * Carrega e renderiza movimentações filtradas
+ */
+async function carregarEFiltrar(dataInicial, dataFinal) {
+  setCarregando(true);
+  try {
+    const movs = await window.NailFlow.financeiro.filtrarMovimentacoesPorPeriodoAsync(dataInicial, dataFinal);
+    renderizarMovimentacoes(movs);
+  } catch (err) {
+    console.error('[UI] Erro ao filtrar:', err);
+    renderizarMovimentacoes([]);
+    mensagemErroFinanceiro.textContent = "Erro ao carregar movimentações. Tente recarregar a página.";
+  } finally {
+    setCarregando(false);
+  }
+}
+
+/**
+ * Carrega e renderiza todas as movimentações
+ */
+async function carregarTodas() {
+  setCarregando(true);
+  try {
+    const movs = await window.NailFlow.financeiro.listarMovimentacoesAsync();
+    renderizarMovimentacoes(movs);
+  } catch (err) {
+    console.error('[UI] Erro ao carregar:', err);
+    renderizarMovimentacoes([]);
+    mensagemErroFinanceiro.textContent = "Erro ao carregar movimentações. Tente recarregar a página.";
+  } finally {
+    setCarregando(false);
+  }
+}
+
+// Handlers de filtro
+botaoFiltrar.addEventListener("click", () => {
+  const dataInicial = campoDataInicial.value;
+  const dataFinal = campoDataFinal.value;
+
+  if (dataInicial && dataFinal && dataInicial > dataFinal) {
+    alert("A data inicial não pode ser posterior à data final.");
+    return;
+  }
+
+  carregarEFiltrar(dataInicial, dataFinal);
 });
 
-// Renderiza os dados iniciais somente após a aplicação carregar o estado persistido
-document.addEventListener("DOMContentLoaded", () => {
-  renderizarMovimentacoes(listarMovimentacoes());
+botaoLimparFiltro.addEventListener("click", () => {
+  campoDataInicial.value = "";
+  campoDataFinal.value = "";
+  carregarTodas();
+});
+
+// Atualiza a interface sempre que o estado das movimentações mudar (evento síncrono do cache local)
+document.addEventListener("movimentacoes:atualizadas", (event) => {
+  if (!carregando) {
+    renderizarMovimentacoes(event.detail);
+  }
+});
+
+// Renderiza os dados iniciais quando o módulo financeiro estiver pronto
+document.addEventListener("DOMContentLoaded", async () => {
+  // Aguarda o financeiro inicializar (auth + repo)
+  if (window.NailFlow?.financeiro) {
+    await carregarTodas();
+  } else {
+    // Fallback: aguarda evento de auth
+    window.addEventListener('auth:login', async () => {
+      await carregarTodas();
+    }, { once: true });
+  }
 });
