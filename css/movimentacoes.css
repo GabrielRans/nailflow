@@ -3,6 +3,11 @@
    Identidade visual: Modelo B (Mobile-first)
 ======================================== */
 
+[data-tela="financeiro"] > a[href="#movimentacao"] {
+  display: inline-block;
+  margin-bottom: 16px;
+}
+
 .filtros-movimentacoes {
   display: grid;
   grid-template-columns: 1fr;
@@ -26,7 +31,7 @@
   width: 100%;
   min-height: 44px;
   padding: 8px 12px;
-  border: 1px solid #CBD5E1;
+  border: 1px solid #667085;
   border-radius: 8px;
   background-color: #FFFFFF;
   color: #26364D;
@@ -74,7 +79,7 @@
 }
 
 .filtros-movimentacoes #btn-limpar-filtro {
-  border: 1px solid #CBD5E1;
+  border: 1px solid #667085;
   background-color: #FFFFFF;
   color: #26364D;
 }
