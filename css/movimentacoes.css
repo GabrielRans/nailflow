@@ -4,7 +4,7 @@
 ======================================== */
 
 [data-tela="financeiro"] > a[href="#movimentacao"] {
-  display: inline-block;
+  display: inline-flex;
   margin-bottom: 16px;
 }
 
@@ -32,11 +32,12 @@
   min-height: 44px;
   padding: 8px 12px;
   border: 1px solid #667085;
-  border-radius: 8px;
+  border-radius: 12px;
   background-color: #FFFFFF;
   color: #26364D;
   font-family: inherit;
-  font-size: 0.875rem;
+  font-size: 1rem;
+  line-height: 1.25;
   box-sizing: border-box;
 }
 
@@ -52,7 +53,7 @@
   justify-content: center;
   min-height: 44px;
   padding: 10px 16px;
-  border-radius: 8px;
+  border-radius: 12px;
   font-family: inherit;
   font-size: 0.875rem;
   font-weight: 600;
