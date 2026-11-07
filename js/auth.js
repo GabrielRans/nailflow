@@ -116,9 +116,9 @@ export async function loginComGoogle() {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        // URL limpa sem hash - evita duplo hash no callback (#login#access_token=...)
-        // Supabase detecta sessão na URL automaticamente (detectSessionInUrl: true)
-        redirectTo: `${window.location.origin}${window.location.pathname}`,
+        // Redireciona dinamicamente para o domínio atual (produção ou localhost)
+        // Evita redirecionamento fixo para localhost em produção (Cloudflare Pages)
+        redirectTo: window.location.origin,
         // Solicita acesso ao email e perfil
         scopes: 'email profile',
       },
