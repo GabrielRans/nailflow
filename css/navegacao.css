@@ -1,0 +1,99 @@
+/* ========================================
+   NAVEGAÇÃO PRINCIPAL — NAILFLOW
+   Identidade visual: Modelo B
+======================================== */
+
+nav[aria-label="Navegação principal"] {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: stretch;
+
+  width: 100%;
+  margin: 0;
+
+  padding: 8px max(20px, calc((100% - 720px) / 2 + 20px));
+
+  background-color: #26364D;
+}
+
+/* Links da navegação */
+
+nav[aria-label="Navegação principal"] a[data-rota] {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  min-width: 0;
+  min-height: 44px;
+
+  padding: 12px 10px;
+
+  color: #FFFFFF;
+  font-family: "Inter", sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.25;
+  text-align: center;
+  text-decoration: none;
+
+  border-radius: 8px 8px 0 0;
+  border: 1px solid transparent;
+  border-bottom: 3px solid transparent;
+  background-color: transparent;
+
+  transition: background-color 150ms ease;
+}
+
+/* Estado hover */
+
+nav[aria-label="Navegação principal"] a[data-rota]:hover {
+  background-color: #63344A;
+}
+
+/* Área selecionada */
+
+nav[aria-label="Navegação principal"] a[data-rota][aria-current="page"] {
+  background-color: #7C435C;
+  border-bottom-color: #FFFFFF;
+}
+
+/* Foco por teclado */
+
+nav[aria-label="Navegação principal"] a[data-rota]:focus-visible {
+  outline: 3px solid #F5F6F8;
+  outline-offset: -5px;
+  position: relative;
+  z-index: 1;
+}
+
+/* Acessibilidade: respeitar preferência por menos movimento */
+
+@media (prefers-reduced-motion: reduce) {
+  nav[aria-label="Navegação principal"] a[data-rota] {
+    transition: none;
+  }
+}
+
+/* ========================================
+   RESPONSIVIDADE
+======================================== */
+
+@media (max-width: 767px) {
+  nav[aria-label="Navegação principal"] {
+    padding: 8px 20px;
+    gap: 4px;
+  }
+
+  nav[aria-label="Navegação principal"] a[data-rota] {
+    padding: 10px 4px;
+    font-size: 13px;
+    white-space: nowrap;
+  }
+}
+
+@media (max-width: 360px) {
+  nav[aria-label="Navegação principal"] {
+    padding-right: 12px;
+    padding-left: 12px;
+  }
+}
