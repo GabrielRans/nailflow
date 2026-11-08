@@ -1,91 +1,53 @@
 /**
  * Módulo Financeiro - NailFlow
- * API dual: localStorage (fallback/síncrono para testes) + Supabase (assíncrono para produção)
- * Carregado como script clássico (não ES module) para compatibilidade com testes
+ * API assíncrona Supabase (produção) + Repositório in-memory (testes)
+ * localStorage NÃO é usado automaticamente em produção - apenas para testes via injeção de dependência
  */
 
 const CHAVE_MOVIMENTACOES = "nailflow_movimentacoes";
 
 // Estado interno
 let movimentacoes = [];
-let repositorioAtivo = null; // 'localStorage' | 'supabase' | null
+let repositorioAtivo = null; // 'supabase' | 'memory' | null
 let repoSupabase = null;
+let repoMemory = null;
 let inicializacaoPromise = null;
 
 // =============================================================================
-// Repositório localStorage (síncrono) - Fallback para testes
+// Repositório em Memória (para testes) - Síncrono
 // =============================================================================
 
-const repoLocalStorage = {
-  salvar(todas) {
-    const textoMovimentacoes = JSON.stringify(todas);
-    localStorage.setItem(CHAVE_MOVIMENTACOES, textoMovimentacoes);
-  },
-  listar() {
-    const dadosSalvos = localStorage.getItem(CHAVE_MOVIMENTACOES);
-    if (dadosSalvos !== null) {
-      return JSON.parse(dadosSalvos);
-    }
-    return [];
-  },
-  buscarPorId(id) {
-    const lista = this.listar();
-    return lista.find(m => m.id === id) ?? null;
-  },
-  adicionar(movimentacao) {
-    const lista = this.listar();
-    lista.push(movimentacao);
-    this.salvar(lista);
-    return movimentacao;
-  },
-  atualizar(id, dadosAtualizados) {
-    const lista = this.listar();
-    const idx = lista.findIndex(m => m.id === id);
-    if (idx === -1) return false;
-    lista[idx] = { ...dadosAtualizados, id };
-    this.salvar(lista);
-    return true;
-  },
-  excluir(id) {
-    const lista = this.listar();
-    const idx = lista.findIndex(m => m.id === id);
-    if (idx === -1) return false;
-    lista.splice(idx, 1);
-    this.salvar(lista);
-    return true;
-  },
-  filtrarPorPeriodo(dataInicial, dataFinal) {
-    const lista = this.listar();
-    return lista.filter(m => {
-      const atendeInicial = !dataInicial || m.data >= dataInicial;
-      const atendeFinal = !dataFinal || m.data <= dataFinal;
-      return atendeInicial && atendeFinal;
-    });
-  }
-};
-
-// =============================================================================
-// API Síncrona Legada (Compatibilidade com testes) - @deprecated
-// =============================================================================
-
-/**
- * Carrega movimentações do localStorage para o cache local (síncrono)
- * @deprecated Use API assíncrona
- */
-function carregarMovimentacoes() {
-  const dadosSalvos = localStorage.getItem(CHAVE_MOVIMENTACOES);
-  if (dadosSalvos !== null) {
-    movimentacoes = JSON.parse(dadosSalvos);
-  }
-}
-
-/**
- * Salva movimentações do cache local no localStorage (síncrono)
- * @deprecated Use API assíncrona
- */
-function salvarMovimentacoes() {
-  const textoMovimentacoes = JSON.stringify(movimentacoes);
-  localStorage.setItem(CHAVE_MOVIMENTACOES, textoMovimentacoes);
+function criarRepositorioMemoria() {
+  const dados = [];
+  return {
+    tipo: 'memory',
+    salvar(todas) { dados.length = 0; dados.push(...todas); },
+    listar() { return [...dados]; },
+    buscarPorId(id) { return dados.find(m => m.id === id) ?? null; },
+    adicionar(movimentacao) { dados.push(movimentacao); return movimentacao; },
+    atualizar(id, dadosAtualizados) {
+      const idx = dados.findIndex(m => m.id === id);
+      if (idx === -1) return false;
+      dados[idx] = { ...dadosAtualizados, id };
+      return true;
+    },
+    excluir(id) {
+      const idx = dados.findIndex(m => m.id === id);
+      if (idx === -1) return false;
+      dados.splice(idx, 1);
+      return true;
+    },
+    filtrarPorPeriodo(dataInicial, dataFinal) {
+      return dados.filter(m => {
+        const atendeInicial = !dataInicial || m.data >= dataInicial;
+        const atendeFinal = !dataFinal || m.data <= dataFinal;
+        return atendeInicial && atendeFinal;
+      });
+    },
+    // Para testes: permite injetar dados iniciais
+    _setDados(novosDados) { dados.length = 0; dados.push(...novosDados); },
+    _getDados() { return [...dados]; }
+  };
 }
 
 // =============================================================================
@@ -106,54 +68,110 @@ async function carregarRepoSupabase() {
 }
 
 /**
- * Inicializa o repositório adequado baseado no estado de autenticação
- * @returns {Promise<Object>} Repositório ativo
+ * Inicializa o repositório Supabase (produção)
+ * FALHA se não conseguir criar o repositório - NÃO faz fallback automático para localStorage
+ * @returns {Promise<Object>} Repositório Supabase
  */
-async function inicializarRepositorio() {
-  if (repositorioAtivo) return getRepo();
+async function inicializarRepositorioSupabase() {
+  if (repositorioAtivo === 'supabase' && repoSupabase) return repoSupabase;
 
-  // Tentar criar repositório Supabase (dynamic import)
   const tentarCriar = await carregarRepoSupabase();
-  if (tentarCriar) {
-    repoSupabase = await tentarCriar();
+  if (!tentarCriar) {
+    throw new Error('Módulo do repositório Supabase não disponível');
   }
 
-  if (repoSupabase) {
-    repositorioAtivo = 'supabase';
-    // Carregar dados do Supabase para cache local
-    try {
-      movimentacoes = await repoSupabase.listar();
-    } catch {
-      movimentacoes = [];
-    }
-  } else {
-    repositorioAtivo = 'localStorage';
-    // Carregar do localStorage
-    const dadosSalvos = localStorage.getItem(CHAVE_MOVIMENTACOES);
-    if (dadosSalvos !== null) {
-      movimentacoes = JSON.parse(dadosSalvos);
-    }
-  }
+  repoSupabase = await tentarCriar();
+  // tentarCriar agora lança erro em vez de retornar null se não autenticado/autorizado
 
-  return getRepo();
+  repositorioAtivo = 'supabase';
+  // Carregar dados do Supabase para cache local
+  movimentacoes = await repoSupabase.listar();
+  return repoSupabase;
 }
 
+/**
+ * Inicializa repositório em memória (para testes)
+ * @returns {Object} Repositório em memória
+ */
+function inicializarRepositorioMemoria(dadosIniciais = []) {
+  repoMemory = criarRepositorioMemoria();
+  repoMemory._setDados(dadosIniciais);
+  repositorioAtivo = 'memory';
+  movimentacoes = repoMemory.listar();
+  return repoMemory;
+}
+
+/**
+ * Obtém o repositório ativo atual
+ * @returns {Object|null}
+ */
 function getRepo() {
-  return repositorioAtivo === 'supabase' ? repoSupabase : repoLocalStorage;
+  if (repositorioAtivo === 'supabase') return repoSupabase;
+  if (repositorioAtivo === 'memory') return repoMemory;
+  return null;
 }
 
 /**
  * Força reinicialização do repositório (útil após login/logout)
+ * Em produção: reinicializa Supabase
+ * Em testes: mantém repositório em memória se já existir
  */
 async function reinicializarRepositorio() {
+  if (repositorioAtivo === 'memory' && repoMemory) {
+    // Em testes, mantém o repositório em memória
+    movimentacoes = repoMemory.listar();
+    return repoMemory;
+  }
+
   repositorioAtivo = null;
   repoSupabase = null;
+  inicializacaoPromise = null;
   movimentacoes = [];
-  return await inicializarRepositorio();
+  return await obterRepositorio();
 }
 
-// Inicializar imediatamente (não await - uso lazy)
-inicializacaoPromise = inicializarRepositorio();
+/**
+ * Define repositório ativo explicitamente (para testes)
+ * @param {Object} repo - Repositório a usar
+ */
+function _setRepositorioParaTeste(repo) {
+  repoSupabase = null;
+  repoMemory = repo;
+  repositorioAtivo = 'memory';
+  movimentacoes = repo.listar();
+  // Cancela qualquer inicialização pendente do Supabase
+  inicializacaoPromise = null;
+}
+
+/**
+ * Inicialização preguiçosa (lazy) - só inicializa na primeira chamada da API assíncrona
+ * @returns {Promise<Object>} Repositório ativo
+ */
+async function obterRepositorio() {
+  // Se já tem repositório de memória (testes), usa ele
+  if (repositorioAtivo === 'memory' && repoMemory) {
+    return repoMemory;
+  }
+
+  // Se já tem repositório Supabase, usa ele
+  if (repositorioAtivo === 'supabase' && repoSupabase) {
+    return repoSupabase;
+  }
+
+  // Se já está inicializando, aguarda
+  if (inicializacaoPromise) {
+    return await inicializacaoPromise;
+  }
+
+  // Inicializa Supabase (apenas na primeira chamada)
+  inicializacaoPromise = inicializarRepositorioSupabase().catch(err => {
+    console.error('[Financeiro] Falha ao inicializar Supabase:', err.message);
+    inicializacaoPromise = null; // Permite retry
+    throw err;
+  });
+
+  return await inicializacaoPromise;
+}
 
 // =============================================================================
 // Helpers internos
@@ -168,18 +186,18 @@ function dispararAtualizacao(lista) {
 }
 
 // =============================================================================
-// API ASSÍNCRONA (Usa repositório Supabase diretamente)
+// API ASSÍNCRONA (Produção - usa repositório Supabase diretamente)
 // =============================================================================
 
 /**
- * Adiciona movimentação (assíncrono - direto no repositório)
+ * Adiciona movimentação (assíncrono - direto no repositório Supabase)
  * @param {Object} movimentacao
  * @returns {Promise<boolean>}
  */
 async function adicionarMovimentacaoAsync(movimentacao) {
   if (!validarMovimentacao(movimentacao)) return false;
   try {
-    const repo = await inicializacaoPromise;
+    const repo = await obterRepositorio();
     await repo.adicionar(movimentacao);
     movimentacoes = await repo.listar();
     dispararAtualizacao(movimentacoes);
@@ -191,34 +209,34 @@ async function adicionarMovimentacaoAsync(movimentacao) {
 }
 
 /**
- * Lista movimentações (assíncrono - direto do repositório)
+ * Lista movimentações (assíncrono - direto do repositório Supabase)
  * @returns {Promise<Array>}
  */
 async function listarMovimentacoesAsync() {
-  const repo = await inicializacaoPromise;
+  const repo = await obterRepositorio();
   movimentacoes = await repo.listar();
   return [...movimentacoes];
 }
 
 /**
- * Busca movimentação por ID (assíncrono - direto do repositório)
+ * Busca movimentação por ID (assíncrono - direto do repositório Supabase)
  * @param {string} id
  * @returns {Promise<Object|null>}
  */
 async function buscarMovimentacaoPorIdAsync(id) {
-  const repo = await inicializacaoPromise;
+  const repo = await obterRepositorio();
   return await repo.buscarPorId(id);
 }
 
 /**
- * Atualiza movimentação (assíncrono - direto no repositório)
+ * Atualiza movimentação (assíncrono - direto no repositório Supabase)
  * @param {string} id
  * @param {Object} dadosAtualizados
  * @returns {Promise<boolean>}
  */
 async function atualizarMovimentacaoAsync(id, dadosAtualizados) {
   try {
-    const repo = await inicializacaoPromise;
+    const repo = await obterRepositorio();
     const ok = await repo.atualizar(id, dadosAtualizados);
     if (ok) {
       movimentacoes = await repo.listar();
@@ -232,13 +250,13 @@ async function atualizarMovimentacaoAsync(id, dadosAtualizados) {
 }
 
 /**
- * Exclui movimentação (assíncrono - direto no repositório)
+ * Exclui movimentação (assíncrono - direto no repositório Supabase)
  * @param {string} id
  * @returns {Promise<boolean>}
  */
 async function excluirMovimentacaoAsync(id) {
   try {
-    const repo = await inicializacaoPromise;
+    const repo = await obterRepositorio();
     const ok = await repo.excluir(id);
     if (ok) {
       movimentacoes = await repo.listar();
@@ -252,22 +270,24 @@ async function excluirMovimentacaoAsync(id) {
 }
 
 /**
- * Filtra movimentações por período (assíncrono - direto do repositório)
+ * Filtra movimentações por período (assíncrono - direto do repositório Supabase)
  * @param {string} dataInicial
  * @param {string} dataFinal
  * @returns {Promise<Array>}
  */
 async function filtrarMovimentacoesPorPeriodoAsync(dataInicial, dataFinal) {
-  const repo = await inicializacaoPromise;
+  const repo = await obterRepositorio();
   return await repo.filtrarPorPeriodo(dataInicial, dataFinal);
 }
 
 // =============================================================================
-// API SÍNCRONA (Compatibilidade - usa cache em memória + persiste assíncrono)
+// API SÍNCRONA (Apenas para testes - usa repositório em memória injetado)
 // =============================================================================
+// NOTA: Em produção, repositorioAtivo === 'supabase' e estas funções NÃO funcionam
+//       Elas só funcionam quando _setRepositorioParaTeste() injetou um repo de memória
 
 /**
- * Adiciona movimentação (síncrono - usa cache local + persiste assíncrono)
+ * Adiciona movimentação (síncrono - apenas para testes com repo em memória)
  * @param {Object} movimentacao
  * @returns {boolean}
  */
@@ -276,142 +296,99 @@ function adicionarMovimentacao(movimentacao) {
     return false;
   }
 
-  // Adiciona ao cache local imediatamente
-  movimentacoes.push(movimentacao);
-
-  // Persiste: se não Supabase (inclui null/fallback), faz sincronicamente; se Supabase, assíncrono
-  if (repositorioAtivo !== 'supabase') {
-    const repo = getRepo();
-    repo.adicionar(movimentacao);
-  } else {
-    // Persiste assíncrono
-    (async () => {
-      try {
-        const repo = await inicializacaoPromise;
-        await repo.adicionar(movimentacao);
-        // Recarrega do Supabase para garantir consistência
-        if (repositorioAtivo === 'supabase') {
-          movimentacoes = await repo.listar();
-        }
-        dispararAtualizacao(movimentacoes);
-      } catch (err) {
-        console.error('[Financeiro] Erro ao persistir:', err);
-        // Rollback local
-        const idx = movimentacoes.findIndex(m => m.id === movimentacao.id);
-        if (idx !== -1) movimentacoes.splice(idx, 1);
-        dispararAtualizacao(movimentacoes);
-      }
-    })();
+  const repo = getRepo();
+  if (!repo || repositorioAtivo !== 'memory') {
+    console.warn('[Financeiro] API síncrona disponível apenas para testes (repo em memória)');
+    return false;
   }
 
-  // Dispara evento imediato com cache local
+  repo.adicionar(movimentacao);
+  movimentacoes = repo.listar();
   dispararAtualizacao(movimentacoes);
-
   return true;
 }
 
 /**
- * Lista movimentações (síncrono - cache local)
+ * Lista movimentações (síncrono - apenas para testes com repo em memória)
  * @returns {Array}
  */
 function listarMovimentacoes() {
-  return movimentacoes.map(m => ({ ...m }));
+  const repo = getRepo();
+  if (!repo || repositorioAtivo !== 'memory') {
+    console.warn('[Financeiro] API síncrona disponível apenas para testes (repo em memória)');
+    return [];
+  }
+  return repo.listar();
 }
 
 /**
- * Busca movimentação por ID (síncrono - cache local)
+ * Busca movimentação por ID (síncrono - apenas para testes com repo em memória)
  * @param {string} id
  * @returns {Object|undefined}
  */
 function buscarMovimentacaoPorId(id) {
-  return movimentacoes.find(m => m.id === id);
+  const repo = getRepo();
+  if (!repo || repositorioAtivo !== 'memory') {
+    console.warn('[Financeiro] API síncrona disponível apenas para testes (repo em memória)');
+    return undefined;
+  }
+  return repo.buscarPorId(id);
 }
 
 /**
- * Atualiza movimentação (síncrono - cache local + persiste)
+ * Atualiza movimentação (síncrono - apenas para testes com repo em memória)
  * @param {string} id
  * @param {Object} dadosAtualizados
  * @returns {boolean}
  */
 function atualizarMovimentacao(id, dadosAtualizados) {
-  const indice = movimentacoes.findIndex(m => m.id === id);
-  if (indice === -1) return false;
-
-  movimentacoes[indice] = { ...dadosAtualizados, id };
-
-  // Persiste: se não Supabase (inclui null/fallback), faz sincronicamente; se Supabase, assíncrono
-  if (repositorioAtivo !== 'supabase') {
-    const repo = getRepo();
-    repo.atualizar(id, dadosAtualizados);
-  } else {
-    // Persiste assíncrono
-    (async () => {
-      try {
-        const repo = await inicializacaoPromise;
-        await repo.atualizar(id, dadosAtualizados);
-        if (repositorioAtivo === 'supabase') {
-          movimentacoes = await repo.listar();
-        }
-        dispararAtualizacao(movimentacoes);
-      } catch (err) {
-        console.error('[Financeiro] Erro ao atualizar:', err);
-        dispararAtualizacao(movimentacoes);
-      }
-    })();
+  const repo = getRepo();
+  if (!repo || repositorioAtivo !== 'memory') {
+    console.warn('[Financeiro] API síncrona disponível apenas para testes (repo em memória)');
+    return false;
   }
 
-  dispararAtualizacao(movimentacoes);
-  return true;
+  const ok = repo.atualizar(id, dadosAtualizados);
+  if (ok) {
+    movimentacoes = repo.listar();
+    dispararAtualizacao(movimentacoes);
+  }
+  return ok;
 }
 
 /**
- * Exclui movimentação (síncrono - cache local + persiste)
+ * Exclui movimentação (síncrono - apenas para testes com repo em memória)
  * @param {string} id
  * @returns {boolean}
  */
-function ExcluirMovimentacao(id) {
-  const indice = movimentacoes.findIndex(m => m.id === id);
-  if (indice === -1) return false;
-
-  movimentacoes.splice(indice, 1);
-
-  // Persiste: se não Supabase (inclui null/fallback), faz sincronicamente; se Supabase, assíncrono
-  if (repositorioAtivo !== 'supabase') {
-    const repo = getRepo();
-    repo.excluir(id);
-  } else {
-    // Persiste assíncrono
-    (async () => {
-      try {
-        const repo = await inicializacaoPromise;
-        await repo.excluir(id);
-        if (repositorioAtivo === 'supabase') {
-          movimentacoes = await repo.listar();
-        }
-        dispararAtualizacao(movimentacoes);
-      } catch (err) {
-        console.error('[Financeiro] Erro ao excluir:', err);
-        dispararAtualizacao(movimentacoes);
-      }
-    })();
+function excluirMovimentacao(id) {
+  const repo = getRepo();
+  if (!repo || repositorioAtivo !== 'memory') {
+    console.warn('[Financeiro] API síncrona disponível apenas para testes (repo em memória)');
+    return false;
   }
 
-  dispararAtualizacao(movimentacoes);
-  return true;
+  const ok = repo.excluir(id);
+  if (ok) {
+    movimentacoes = repo.listar();
+    dispararAtualizacao(movimentacoes);
+  }
+  return ok;
 }
 
 /**
- * Filtra movimentações por período (síncrono - cache local)
+ * Filtra movimentações por período (síncrono - apenas para testes com repo em memória)
  * @param {string} dataInicial
  * @param {string} dataFinal
  * @returns {Array}
  */
 function filtrarMovimentacoesPorPeriodo(dataInicial, dataFinal) {
-  return movimentacoes.filter(m => {
-    const atendeDataInicial = !dataInicial || m.data >= dataInicial;
-    const atendeDataFinal = !dataFinal || m.data <= dataFinal;
-    return atendeDataInicial && atendeDataFinal;
-  });
+  const repo = getRepo();
+  if (!repo || repositorioAtivo !== 'memory') {
+    console.warn('[Financeiro] API síncrona disponível apenas para testes (repo em memória)');
+    return [];
+  }
+  return repo.filtrarPorPeriodo(dataInicial, dataFinal);
 }
 
 // =============================================================================
@@ -526,21 +503,13 @@ function configurarFormularioMovimentacao() {
 // =============================================================================
 
 function iniciarAplicacao() {
-  // Carrega do localStorage imediatamente como fallback síncrono
-  // (será sobrescrito pela inicialização assíncrona se Supabase estiver disponível)
-  const dadosSalvos = localStorage.getItem(CHAVE_MOVIMENTACOES);
-  if (dadosSalvos !== null) {
-    movimentacoes = JSON.parse(dadosSalvos);
-  }
+  // Em produção: NÃO inicializa o repositório automaticamente
+  // A inicialização é preguiçosa (lazy) - acontece na primeira chamada da API assíncrona
+  // Isso evita erros de inicialização durante carregamento da página
 
-  // Aguarda inicialização do repositório (já iniciada lazy)
-  inicializacaoPromise.then(() => {
-    configurarFormularioMovimentacao();
-  }).catch(err => {
-    console.error('[Financeiro] Falha na inicialização:', err);
-    // Fallback: configura formulário mesmo sem repo
-    configurarFormularioMovimentacao();
-  });
+  // Apenas configura o formulário - a inicialização do repositório
+  // acontecerá quando o usuário interagir (adicionar, listar, etc.)
+  configurarFormularioMovimentacao();
 }
 
 document.addEventListener("DOMContentLoaded", iniciarAplicacao);
@@ -550,26 +519,32 @@ document.addEventListener("DOMContentLoaded", iniciarAplicacao);
 // =============================================================================
 
 const apiFinanceiro = {
-  // API Síncrona (compatibilidade - cache em memória + persiste assíncrono)
-  adicionarMovimentacao,
-  listarMovimentacoes,
-  buscarMovimentacaoPorId,
-  atualizarMovimentacao,
-  ExcluirMovimentacao,
-  filtrarMovimentacoesPorPeriodo,
-  // API Assíncrona
+  // API Assíncrona (Produção - Supabase)
   adicionarMovimentacaoAsync,
   listarMovimentacoesAsync,
   buscarMovimentacaoPorIdAsync,
   atualizarMovimentacaoAsync,
   excluirMovimentacaoAsync,
   filtrarMovimentacoesPorPeriodoAsync,
+
+  // API Síncrona (Apenas Testes - requer _setRepositorioParaTeste)
+  adicionarMovimentacao,
+  listarMovimentacoes,
+  buscarMovimentacaoPorId,
+  atualizarMovimentacao,
+  excluirMovimentacao,
+  filtrarMovimentacoesPorPeriodo,
+
   // Utilitários
   validarMovimentacao,
   calcularIndicadoresFinanceiros,
   reinicializarRepositorio,
+
   // Internos (para testes)
-  _getCache: () => movimentacoes
+  _getCache: () => movimentacoes,
+  _setRepositorioParaTeste,
+  _inicializarRepositorioMemoria: inicializarRepositorioMemoria,
+  _getRepositorioAtivo: () => repositorioAtivo
 };
 
 if (typeof globalThis !== "undefined") {

@@ -8,7 +8,8 @@
     "test": "test"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "node --test test/**/*.test.js",
+    "test:watch": "node --watch --test test/**/*.test.js"
   },
   "repository": {
     "type": "git",

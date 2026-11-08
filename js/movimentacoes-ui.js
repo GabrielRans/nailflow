@@ -123,34 +123,48 @@ function renderizarMovimentacoes(movimentacoes) {
       `Editar movimentação: ${movimentacao.descricao}`
     );
 
-    botaoEditar.addEventListener("click", () => {
-      // Usa cache síncrono para edição imediata (UX responsiva)
-      const movimentacaoSelecionada = window.NailFlow?.financeiro?.buscarMovimentacaoPorId?.(movimentacao.id);
+    botaoEditar.addEventListener("click", async () => {
+      // Usa API assíncrona para buscar a movimentação (compatível com Supabase)
+      botaoEditar.disabled = true;
+      botaoEditar.textContent = "Carregando...";
 
-      if (!movimentacaoSelecionada) {
+      try {
+        const movimentacaoSelecionada = await window.NailFlow.financeiro.buscarMovimentacaoPorIdAsync(movimentacao.id);
+
+        if (!movimentacaoSelecionada) {
+          mensagemErroFinanceiro.textContent =
+            "Não foi possível editar esta movimentação. O registro não foi encontrado.";
+          botaoEditar.disabled = false;
+          botaoEditar.textContent = "Editar";
+          return;
+        }
+
+        mensagemErroFinanceiro.textContent = "";
+
+        campoIdMovimentacao.value = movimentacaoSelecionada.id;
+
+        formularioMovimentacao.elements.tipo.value =
+          movimentacaoSelecionada.tipo;
+        formularioMovimentacao.elements.valor.value =
+          movimentacaoSelecionada.valor;
+        formularioMovimentacao.elements.descricao.value =
+          movimentacaoSelecionada.descricao;
+        formularioMovimentacao.elements.categoria.value =
+          movimentacaoSelecionada.categoria;
+        formularioMovimentacao.elements.data.value =
+          movimentacaoSelecionada.data;
+        formularioMovimentacao.elements.observacao.value =
+          movimentacaoSelecionada.observacao ?? "";
+
+        navegarParaEdicao(botaoEditar);
+      } catch (err) {
+        console.error('[UI] Erro ao buscar movimentação para edição:', err);
         mensagemErroFinanceiro.textContent =
-          "Não foi possível editar esta movimentação. O registro não foi encontrado.";
-        return;
+          "Erro ao carregar dados da movimentação. Tente novamente.";
+      } finally {
+        botaoEditar.disabled = false;
+        botaoEditar.textContent = "Editar";
       }
-
-      mensagemErroFinanceiro.textContent = "";
-
-      campoIdMovimentacao.value = movimentacaoSelecionada.id;
-
-      formularioMovimentacao.elements.tipo.value =
-        movimentacaoSelecionada.tipo;
-      formularioMovimentacao.elements.valor.value =
-        movimentacaoSelecionada.valor;
-      formularioMovimentacao.elements.descricao.value =
-        movimentacaoSelecionada.descricao;
-      formularioMovimentacao.elements.categoria.value =
-        movimentacaoSelecionada.categoria;
-      formularioMovimentacao.elements.data.value =
-        movimentacaoSelecionada.data;
-      formularioMovimentacao.elements.observacao.value =
-        movimentacaoSelecionada.observacao ?? "";
-
-      navegarParaEdicao(botaoEditar);
     });
 
     const botaoExcluir = document.createElement("button");

@@ -61,7 +61,8 @@ export async function criarFinanceiroRepository() {
 
   return {
     /**
-     * Salva lista completa de movimentações (substitui tudo)
+     * Salva (insere ou atualiza) uma lista de movimentações
+     * Usa upsert para evitar perda de dados (delete-all-reinsert é perigoso)
      * @param {Array} movimentacoes
      * @returns {Promise<void>}
      */
@@ -71,38 +72,29 @@ export async function criarFinanceiroRepository() {
         throw new Error('estudio_id não disponível - usuário sem estúdio vinculado');
       }
 
-      // Deletar todas as movimentações do estúdio
-      const { error: deleteError } = await supabase
+      if (!movimentacoes || movimentacoes.length === 0) return;
+
+      const rows = movimentacoes.map(m => ({
+        id: m.id,
+        estudio_id: estudioId,
+        usuario_id: userId,
+        tipo: m.tipo,
+        valor: m.valor,
+        descricao: m.descricao,
+        categoria: m.categoria,
+        data: m.data,
+        observacao: m.observacao ?? null
+      }));
+
+      console.log('[FinanceiroRepo] Salvando (upsert)', rows.length, 'movimentações com estudio_id:', estudioId, 'usuario_id:', userId);
+
+      const { error } = await supabase
         .from(TABELA)
-        .delete()
-        .eq('estudio_id', estudioId);
+        .upsert(rows, { onConflict: 'id' });
 
-      if (deleteError) throw deleteError;
-
-      // Inserir novas se houver
-      if (movimentacoes.length > 0) {
-        const rows = movimentacoes.map(m => ({
-          id: m.id,
-          estudio_id: estudioId,
-          usuario_id: userId,
-          tipo: m.tipo,
-          valor: m.valor,
-          descricao: m.descricao,
-          categoria: m.categoria,
-          data: m.data,
-          observacao: m.observacao ?? null
-        }));
-
-        console.log('[FinanceiroRepo] Salvando', rows.length, 'movimentações com estudio_id:', estudioId, 'usuario_id:', userId);
-
-        const { error: insertError } = await supabase
-          .from(TABELA)
-          .insert(rows);
-
-        if (insertError) {
-          console.error('[FinanceiroRepo] Erro ao salvar:', insertError);
-          throw insertError;
-        }
+      if (error) {
+        console.error('[FinanceiroRepo] Erro ao salvar:', error);
+        throw error;
       }
     },
 
@@ -196,14 +188,15 @@ export async function criarFinanceiroRepository() {
         observacao: dadosAtualizados.observacao ?? null
       };
 
-      const { error } = await supabase
+      const { error, count } = await supabase
         .from(TABELA)
         .update(row)
         .eq('estudio_id', estudioId)
-        .eq('id', id);
+        .eq('id', id)
+        .select('id', { count: 'exact', head: true });
 
       if (error) throw error;
-      return true;
+      return count > 0;
     },
 
     /**
@@ -212,14 +205,15 @@ export async function criarFinanceiroRepository() {
      * @returns {Promise<boolean>}
      */
     async excluir(id) {
-      const { error } = await supabase
+      const { error, count } = await supabase
         .from(TABELA)
         .delete()
         .eq('estudio_id', estudioId)
-        .eq('id', id);
+        .eq('id', id)
+        .select('id', { count: 'exact', head: true });
 
       if (error) throw error;
-      return true;
+      return count > 0;
     },
 
     /**
@@ -252,14 +246,12 @@ export async function criarFinanceiroRepository() {
 }
 
 /**
- * Factory que retorna repositório Supabase se autenticado, senão null
+ * Factory que retorna repositório Supabase se autenticado e autorizado
+ * Lança erro se não autenticado/autorizado ou erro de configuração
  * Usado pelo adapter em app.js
- * @returns {Promise<Object|null>}
+ * @returns {Promise<Object>}
+ * @throws {Error} Se usuário não autenticado, sem estúdio vinculado, ou erro de configuração
  */
 export async function tentarCriarFinanceiroRepository() {
-  try {
-    return await criarFinanceiroRepository();
-  } catch {
-    return null;
-  }
+  return await criarFinanceiroRepository();
 }

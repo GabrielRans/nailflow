@@ -183,14 +183,15 @@ export async function criarMateriaisRepository() {
         quantidade_minima: dadosAtualizados.quantidadeMinima
       };
 
-      const { error } = await supabase
+      const { error, count } = await supabase
         .from(TABELA)
         .update(row)
         .eq('estudio_id', estudioId)
-        .eq('id', id);
+        .eq('id', id)
+        .select('id', { count: 'exact', head: true });
 
       if (error) throw error;
-      return true;
+      return count > 0;
     },
 
     /**
@@ -199,27 +200,26 @@ export async function criarMateriaisRepository() {
      * @returns {Promise<boolean>}
      */
     async excluir(id) {
-      const { error } = await supabase
+      const { error, count } = await supabase
         .from(TABELA)
         .delete()
         .eq('estudio_id', estudioId)
-        .eq('id', id);
+        .eq('id', id)
+        .select('id', { count: 'exact', head: true });
 
       if (error) throw error;
-      return true;
+      return count > 0;
     }
   };
 }
 
 /**
- * Factory que retorna repositório Supabase se autenticado, senão null
+ * Factory que retorna repositório Supabase se autenticado e autorizado
+ * Lança erro se não autenticado/autorizado ou erro de configuração
  * Usado pelo adapter em materiais.js
- * @returns {Promise<Object|null>}
+ * @returns {Promise<Object>}
+ * @throws {Error} Se usuário não autenticado, sem estúdio vinculado, ou erro de configuração
  */
 export async function tentarCriarMateriaisRepository() {
-  try {
-    return await criarMateriaisRepository();
-  } catch {
-    return null;
-  }
+  return await criarMateriaisRepository();
 }

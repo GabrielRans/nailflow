@@ -37,32 +37,50 @@ async function carregarRepoMateriais() {
 
 /**
  * Obtém o repositório ativo (Supabase se autenticado, senão lança erro)
+ * Inicialização preguiçosa (lazy) - só inicializa na primeira chamada da API assíncrona
+ * Não faz fallback silencioso - erros de autenticação/autorização propagam para a UI
  * @returns {Promise<Object>}
  */
 async function obterRepositorio() {
   if (repoSupabase) return repoSupabase;
 
-  const tentarCriar = await carregarRepoMateriais();
-  if (tentarCriar) {
-    repoSupabase = await tentarCriar();
-  }
-  if (!repoSupabase) {
-    throw new Error('Usuário não autenticado ou sem estúdio vinculado. Materiais requerem autenticação.');
+  // Se já está inicializando, aguarda
+  if (inicializacaoPromise) {
+    return await inicializacaoPromise;
   }
 
-  return repoSupabase;
+  // Inicializa Supabase (apenas na primeira chamada)
+  inicializacaoPromise = carregarRepoMateriais()
+    .then(tentarCriar => {
+      if (!tentarCriar) {
+        throw new Error('Módulo do repositório Supabase não disponível');
+      }
+      return tentarCriar();
+    })
+    .then(repo => {
+      if (!repo) {
+        throw new Error('Falha ao criar repositório Supabase: usuário não autenticado/autorizado ou erro de configuração');
+      }
+      repoSupabase = repo;
+      return repo;
+    })
+    .catch(err => {
+      console.error('[Materiais] Falha ao inicializar Supabase:', err.message);
+      inicializacaoPromise = null; // Permite retry
+      throw err;
+    });
+
+  return await inicializacaoPromise;
 }
-
-// Inicializar lazy
-inicializacaoPromise = obterRepositorio().catch(() => null);
 
 /**
  * Força reinicialização do repositório (útil após login/logout)
+ * Não faz fallback silencioso - erros propagam para a UI
  */
 async function reinicializarMateriaisRepository() {
   repoSupabase = null;
-  inicializacaoPromise = obterRepositorio().catch(() => null);
-  return await inicializacaoPromise;
+  inicializacaoPromise = null;
+  return await obterRepositorio();
 }
 
 function validarMaterial(dados) {

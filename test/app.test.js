@@ -10,6 +10,7 @@ const codigoApp = fs.readFileSync("js/app.js", "utf8");
 function criarContextoApp() {
   const contexto = vm.createContext({
     crypto: webcrypto,
+    // localStorage NÃO é mais usado automaticamente - mantido apenas para compatibilidade
     localStorage: {
       _store: {},
       getItem(chave) { return this._store[chave] ?? null; },
@@ -50,6 +51,9 @@ function criarContextoApp() {
             }
           };
         }
+        if (selector === "#financeiro-erro") {
+          return { hidden: true, textContent: "" };
+        }
         return null;
       }
     },
@@ -66,31 +70,28 @@ function criarContextoApp() {
   return contexto;
 }
 
-// Factory de repositório em memória para testes (padrão Repository)
-function criarRepositorioMemoria() {
+// Factory de repositório em memória para testes (compatível com a nova API)
+function criarRepositorioMemoriaParaTeste() {
   const movimentacoes = [];
   return {
-    movimentacoes,
-    async salvar(todas) {
-      movimentacoes.length = 0;
-      movimentacoes.push(...todas);
-    },
-    async listar() { return [...movimentacoes]; },
-    async buscarPorId(id) { return movimentacoes.find(m => m.id === id) ?? null; },
-    async adicionar(movimentacao) { movimentacoes.push(movimentacao); },
-    async atualizar(id, dados) {
+    tipo: 'memory',
+    salvar(todas) { movimentacoes.length = 0; movimentacoes.push(...todas); },
+    listar() { return [...movimentacoes]; },
+    buscarPorId(id) { return movimentacoes.find(m => m.id === id) ?? null; },
+    adicionar(movimentacao) { movimentacoes.push(movimentacao); return movimentacao; },
+    atualizar(id, dadosAtualizados) {
       const idx = movimentacoes.findIndex(m => m.id === id);
       if (idx === -1) return false;
-      movimentacoes[idx] = { ...dados, id };
+      movimentacoes[idx] = { ...dadosAtualizados, id };
       return true;
     },
-    async excluir(id) {
+    excluir(id) {
       const idx = movimentacoes.findIndex(m => m.id === id);
       if (idx === -1) return false;
       movimentacoes.splice(idx, 1);
       return true;
     },
-    async filtrarPorPeriodo(dataInicial, dataFinal) {
+    filtrarPorPeriodo(dataInicial, dataFinal) {
       return movimentacoes.filter(m => {
         const atendeInicial = !dataInicial || m.data >= dataInicial;
         const atendeFinal = !dataFinal || m.data <= dataFinal;
@@ -111,6 +112,13 @@ function dadosValidos(sobrescritas = {}) {
     observacao: "Cliente regular",
     ...sobrescritas
   };
+}
+
+function configurarContextoComRepoMemoria(ctx) {
+  // Injeta repositório em memória para testes
+  const repo = criarRepositorioMemoriaParaTeste();
+  ctx._setRepositorioParaTeste(repo);
+  return repo;
 }
 
 describe("validarMovimentacao", () => {
@@ -407,20 +415,22 @@ describe("calcularIndicadoresFinanceiros", () => {
   });
 });
 
-describe("filtrarMovimentacoesPorPeriodo", () => {
+describe("filtrarMovimentacoesPorPeriodo (API síncrona - testes com repo memória)", () => {
   let ctx;
+  let repo;
 
   beforeEach(() => {
     ctx = criarContextoApp();
-    // Popula via localStorage para definir estado interno
+    repo = configurarContextoComRepoMemoria(ctx);
+
+    // Popula via repositório em memória
     const movsBase = [
       { ...dadosValidos(), id: "1", data: "2026-01-10", valor: 100 },
       { ...dadosValidos(), id: "2", data: "2026-01-20", valor: 200 },
       { ...dadosValidos(), id: "3", data: "2026-02-05", valor: 300 },
       { ...dadosValidos(), id: "4", data: "2026-02-15", valor: 400 }
     ];
-    ctx.localStorage.setItem("nailflow_movimentacoes", JSON.stringify(movsBase));
-    ctx.carregarMovimentacoes();
+    movsBase.forEach(m => repo.adicionar(m));
   });
 
   it("retorna todas quando sem filtros", () => {
@@ -474,332 +484,275 @@ describe("filtrarMovimentacoesPorPeriodo", () => {
   });
 });
 
-describe("Repositório em memória - CRUD Movimentações", () => {
-  let repo;
-
-  beforeEach(() => {
-    repo = criarRepositorioMemoria();
-  });
-
-  describe("adicionar / listar", () => {
-    it("adiciona e lista movimentação", async () => {
-      const mov = { ...dadosValidos(), id: "test-1" };
-      await repo.adicionar(mov);
-      const lista = await repo.listar();
-      assert.equal(lista.length, 1);
-      assert.equal(lista[0].id, "test-1");
-      assert.equal(lista[0].descricao, "Corte de unha");
-    });
-
-    it("retorna cópia da lista (imutabilidade)", async () => {
-      await repo.adicionar({ ...dadosValidos(), id: "1" });
-      const lista1 = await repo.listar();
-      lista1.push({ teste: "mutacao" });
-      const lista2 = await repo.listar();
-      assert.equal(lista2.length, 1);
-    });
-
-    it("lista vazia inicialmente", async () => {
-      const lista = await repo.listar();
-      assert.deepEqual(lista, []);
-    });
-  });
-
-  describe("buscarPorId", () => {
-    it("encontra movimentação existente", async () => {
-      const mov = { ...dadosValidos(), id: "abc-123" };
-      await repo.adicionar(mov);
-      const r = await repo.buscarPorId("abc-123");
-      assert.deepEqual(r, mov);
-    });
-
-    it("retorna null para ID inexistente", async () => {
-      const r = await repo.buscarPorId("inexistente");
-      assert.equal(r, null);
-    });
-  });
-
-  describe("atualizar", () => {
-    it("atualiza movimentação existente", async () => {
-      await repo.adicionar({ ...dadosValidos(), id: "1", valor: 100 });
-      const ok = await repo.atualizar("1", { ...dadosValidos(), id: "1", valor: 200, descricao: "Atualizado" });
-      assert.equal(ok, true);
-      const r = await repo.buscarPorId("1");
-      assert.equal(r.valor, 200);
-      assert.equal(r.descricao, "Atualizado");
-    });
-
-    it("mantém ID original na atualização", async () => {
-      await repo.adicionar({ ...dadosValidos(), id: "manter-id" });
-      await repo.atualizar("manter-id", { ...dadosValidos(), id: "novo-id", valor: 500 });
-      const r = await repo.buscarPorId("manter-id");
-      assert.equal(r.id, "manter-id");
-      assert.equal(r.valor, 500);
-    });
-
-    it("retorna false para ID inexistente", async () => {
-      const ok = await repo.atualizar("inexistente", { ...dadosValidos(), valor: 100 });
-      assert.equal(ok, false);
-    });
-  });
-
-  describe("excluir", () => {
-    it("exclui movimentação existente", async () => {
-      await repo.adicionar({ ...dadosValidos(), id: "del-1" });
-      const ok = await repo.excluir("del-1");
-      assert.equal(ok, true);
-      const r = await repo.buscarPorId("del-1");
-      assert.equal(r, null);
-    });
-
-    it("retorna false para ID inexistente", async () => {
-      const ok = await repo.excluir("inexistente");
-      assert.equal(ok, false);
-    });
-
-    it("não afeta outras movimentações", async () => {
-      await repo.adicionar({ ...dadosValidos(), id: "1" });
-      await repo.adicionar({ ...dadosValidos(), id: "2" });
-      await repo.excluir("1");
-      const lista = await repo.listar();
-      assert.equal(lista.length, 1);
-      assert.equal(lista[0].id, "2");
-    });
-  });
-
-  describe("filtrarPorPeriodo", () => {
-    beforeEach(async () => {
-      await repo.adicionar({ ...dadosValidos(), id: "1", data: "2026-01-10" });
-      await repo.adicionar({ ...dadosValidos(), id: "2", data: "2026-01-20" });
-      await repo.adicionar({ ...dadosValidos(), id: "3", data: "2026-02-05" });
-    });
-
-    it("filtra corretamente por período", async () => {
-      const r = await repo.filtrarPorPeriodo("2026-01-01", "2026-01-31");
-      assert.equal(r.length, 2);
-      assert.equal(r[0].id, "1");
-      assert.equal(r[1].id, "2");
-    });
-
-    it("retorna vazio para período sem dados", async () => {
-      const r = await repo.filtrarPorPeriodo("2026-03-01", "2026-03-31");
-      assert.equal(r.length, 0);
-    });
-  });
-});
-
-describe("Integração: Módulo app.js com localStorage mockado", () => {
+describe("API Síncrona com Repositório em Memória - CRUD Movimentações", () => {
   let ctx;
+  let repo;
   let eventosRecebidos;
 
   beforeEach(() => {
     ctx = criarContextoApp();
+    repo = configurarContextoComRepoMemoria(ctx);
     eventosRecebidos = [];
 
-    // Captura eventos disparados
     ctx.document.addEventListener("movimentacoes:atualizadas", (e) => {
       eventosRecebidos.push(e.detail);
     });
   });
 
-  it("adicionarMovimentacao persiste no localStorage e dispara evento", () => {
-    const mov = { ...dadosValidos(), id: "evt-1" };
-    const ok = ctx.adicionarMovimentacao(mov);
-    assert.equal(ok, true);
-    assert.equal(eventosRecebidos.length, 1);
-    assert.equal(eventosRecebidos[0].length, 1);
-    assert.equal(eventosRecebidos[0][0].id, "evt-1");
+  describe("adicionarMovimentacao", () => {
+    it("adiciona movimentação válida e dispara evento", () => {
+      const mov = { ...dadosValidos(), id: "evt-1" };
+      const ok = ctx.adicionarMovimentacao(mov);
+      assert.equal(ok, true);
+      assert.equal(eventosRecebidos.length, 1);
+      assert.equal(eventosRecebidos[0].length, 1);
+      assert.equal(eventosRecebidos[0][0].id, "evt-1");
+    });
 
-    // Verifica se persistiu no localStorage
-    const salvo = JSON.parse(ctx.localStorage.getItem("nailflow_movimentacoes"));
-    assert.equal(salvo.length, 1);
-    assert.equal(salvo[0].id, "evt-1");
+    it("rejeita movimentação inválida e não dispara evento", () => {
+      const ok = ctx.adicionarMovimentacao({ ...dadosValidos(), valor: -10 });
+      assert.equal(ok, false);
+      assert.equal(eventosRecebidos.length, 0);
+    });
+
+    it("adiciona múltiplas movimentações", () => {
+      ctx.adicionarMovimentacao({ ...dadosValidos(), id: "1" });
+      ctx.adicionarMovimentacao({ ...dadosValidos(), id: "2" });
+      assert.equal(ctx.listarMovimentacoes().length, 2);
+    });
   });
 
-  it("adicionarMovimentacao rejeita inválida e não dispara evento", () => {
-    const ok = ctx.adicionarMovimentacao({ ...dadosValidos(), valor: -10 });
-    assert.equal(ok, false);
-    assert.equal(eventosRecebidos.length, 0);
+  describe("listarMovimentacoes", () => {
+    it("retorna lista vazia inicialmente", () => {
+      const lista = ctx.listarMovimentacoes();
+      assert.deepEqual(lista, []);
+    });
+
+    it("retorna cópia da lista (imutabilidade)", () => {
+      ctx.adicionarMovimentacao({ ...dadosValidos(), id: "1" });
+      const lista1 = ctx.listarMovimentacoes();
+      lista1.push({ teste: "mutacao" });
+      const lista2 = ctx.listarMovimentacoes();
+      assert.equal(lista2.length, 1);
+    });
   });
 
-  it("atualizarMovimentacao persiste no localStorage e dispara evento", () => {
-    // Prepara estado inicial via localStorage
-    ctx.localStorage.setItem("nailflow_movimentacoes", JSON.stringify([{ ...dadosValidos(), id: "upd-1", valor: 100 }]));
-    ctx.carregarMovimentacoes();
+  describe("buscarMovimentacaoPorId", () => {
+    it("encontra movimentação existente", () => {
+      ctx.adicionarMovimentacao({ ...dadosValidos(), id: "abc-123" });
+      const r = ctx.buscarMovimentacaoPorId("abc-123");
+      assert.deepEqual(r, { ...dadosValidos(), id: "abc-123" });
+    });
 
-    const ok = ctx.atualizarMovimentacao("upd-1", { ...dadosValidos(), valor: 200 });
-    assert.equal(ok, true);
-    assert.equal(eventosRecebidos.length, 1);
-    assert.equal(eventosRecebidos[0][0].valor, 200);
-
-    // Verifica se persistiu
-    const salvo = JSON.parse(ctx.localStorage.getItem("nailflow_movimentacoes"));
-    assert.equal(salvo[0].valor, 200);
+    it("retorna null para ID inexistente", () => {
+      const r = ctx.buscarMovimentacaoPorId("inexistente");
+      assert.equal(r, null);
+    });
   });
 
-  it("atualizarMovimentacao retorna false para ID inexistente", () => {
-    ctx.localStorage.setItem("nailflow_movimentacoes", JSON.stringify([]));
-    ctx.carregarMovimentacoes();
+  describe("atualizarMovimentacao", () => {
+    it("atualiza movimentação existente e dispara evento", () => {
+      ctx.adicionarMovimentacao({ ...dadosValidos(), id: "upd-1", valor: 100 });
+      eventosRecebidos.length = 0;
 
-    const ok = ctx.atualizarMovimentacao("inexistente", { ...dadosValidos(), valor: 100 });
-    assert.equal(ok, false);
-    assert.equal(eventosRecebidos.length, 0);
+      const ok = ctx.atualizarMovimentacao("upd-1", { ...dadosValidos(), valor: 200 });
+      assert.equal(ok, true);
+      assert.equal(eventosRecebidos.length, 1);
+      assert.equal(eventosRecebidos[0][0].valor, 200);
+    });
+
+    it("mantém ID original na atualização", () => {
+      ctx.adicionarMovimentacao({ ...dadosValidos(), id: "manter-id" });
+      ctx.atualizarMovimentacao("manter-id", { ...dadosValidos(), id: "novo-id", valor: 500 });
+      const r = ctx.buscarMovimentacaoPorId("manter-id");
+      assert.equal(r.id, "manter-id");
+      assert.equal(r.valor, 500);
+    });
+
+    it("retorna false para ID inexistente", () => {
+      const ok = ctx.atualizarMovimentacao("inexistente", { ...dadosValidos(), valor: 100 });
+      assert.equal(ok, false);
+      assert.equal(eventosRecebidos.length, 0);
+    });
   });
 
-  it("ExcluirMovimentacao persiste no localStorage e dispara evento", () => {
-    ctx.localStorage.setItem("nailflow_movimentacoes", JSON.stringify([{ ...dadosValidos(), id: "del-1" }]));
-    ctx.carregarMovimentacoes();
+  describe("excluirMovimentacao", () => {
+    it("exclui movimentação existente e dispara evento", () => {
+      ctx.adicionarMovimentacao({ ...dadosValidos(), id: "del-1" });
+      eventosRecebidos.length = 0;
 
-    const ok = ctx.ExcluirMovimentacao("del-1");
-    assert.equal(ok, true);
-    assert.equal(eventosRecebidos.length, 1);
-    assert.equal(eventosRecebidos[0].length, 0);
+      const ok = ctx.excluirMovimentacao("del-1");
+      assert.equal(ok, true);
+      assert.equal(eventosRecebidos.length, 1);
+      assert.equal(eventosRecebidos[0].length, 0);
+    });
 
-    // Verifica se persistiu
-    const salvo = JSON.parse(ctx.localStorage.getItem("nailflow_movimentacoes"));
-    assert.equal(salvo.length, 0);
-  });
+    it("retorna false para ID inexistente", () => {
+      const ok = ctx.excluirMovimentacao("inexistente");
+      assert.equal(ok, false);
+      assert.equal(eventosRecebidos.length, 0);
+    });
 
-  it("ExcluirMovimentacao retorna false para ID inexistente", () => {
-    ctx.localStorage.setItem("nailflow_movimentacoes", JSON.stringify([]));
-    ctx.carregarMovimentacoes();
-
-    const ok = ctx.ExcluirMovimentacao("inexistente");
-    assert.equal(ok, false);
-    assert.equal(eventosRecebidos.length, 0);
-  });
-
-  it("listarMovimentacoes retorna cópia", () => {
-    ctx.localStorage.setItem("nailflow_movimentacoes", JSON.stringify([{ ...dadosValidos(), id: "1" }]));
-    ctx.carregarMovimentacoes();
-
-    const lista = ctx.listarMovimentacoes();
-    lista.push({ teste: "mutacao" });
-    const lista2 = ctx.listarMovimentacoes();
-    assert.equal(lista2.length, 1);
-  });
-
-  it("buscarMovimentacaoPorId encontra existente", () => {
-    ctx.localStorage.setItem("nailflow_movimentacoes", JSON.stringify([{ ...dadosValidos(), id: "find-1" }]));
-    ctx.carregarMovimentacoes();
-
-    const r = ctx.buscarMovimentacaoPorId("find-1");
-    assert.equal(r.id, "find-1");
-    assert.equal(r.tipo, "entrada");
-    assert.equal(r.valor, 100.5);
-    assert.equal(r.descricao, "Corte de unha");
-    assert.equal(r.categoria, "atendimento");
-    assert.equal(r.data, "2026-01-15");
-    assert.equal(r.observacao, "Cliente regular");
-  });
-
-  it("buscarMovimentacaoPorId retorna undefined para inexistente", () => {
-    ctx.localStorage.setItem("nailflow_movimentacoes", JSON.stringify([]));
-    ctx.carregarMovimentacoes();
-
-    const r = ctx.buscarMovimentacaoPorId("inexistente");
-    assert.equal(r, undefined);
-  });
-
-  it("carregarMovimentacoes lê do localStorage", () => {
-    ctx.localStorage.setItem("nailflow_movimentacoes", JSON.stringify([{ ...dadosValidos(), id: "load-1" }]));
-    ctx.carregarMovimentacoes();
-    assert.equal(ctx.listarMovimentacoes().length, 1);
-    assert.equal(ctx.listarMovimentacoes()[0].id, "load-1");
-  });
-
-  it("salvarMovimentacoes escreve no localStorage", () => {
-    ctx.localStorage.setItem("nailflow_movimentacoes", JSON.stringify([]));
-    ctx.carregarMovimentacoes();
-
-    ctx.adicionarMovimentacao({ ...dadosValidos(), id: "save-1" });
-    const salvo = JSON.parse(ctx.localStorage.getItem("nailflow_movimentacoes"));
-    assert.equal(salvo.length, 1);
-    assert.equal(salvo[0].id, "save-1");
+    it("não afeta outras movimentações", () => {
+      ctx.adicionarMovimentacao({ ...dadosValidos(), id: "1" });
+      ctx.adicionarMovimentacao({ ...dadosValidos(), id: "2" });
+      ctx.excluirMovimentacao("1");
+      const lista = ctx.listarMovimentacoes();
+      assert.equal(lista.length, 1);
+      assert.equal(lista[0].id, "2");
+    });
   });
 });
 
-describe("Incompatibilidades para integração assíncrona Supabase", () => {
-  it("API atual é síncrona - adicionarMovimentacao retorna boolean, não Promise", () => {
-    const ctx = criarContextoApp();
-    const resultado = ctx.adicionarMovimentacao(dadosValidos());
-    assert.equal(typeof resultado, "boolean");
-    assert.equal(resultado, true);
+describe("API Assíncrona (Produção) - Interface", () => {
+  let ctx;
+
+  beforeEach(() => {
+    ctx = criarContextoApp();
+    // Injeta repositório de memória para testar a interface assíncrona
+    const repo = criarRepositorioMemoriaParaTeste();
+    ctx._setRepositorioParaTeste(repo);
   });
 
-  it("API atual é síncrona - atualizarMovimentacao retorna boolean, não Promise", () => {
-    const ctx = criarContextoApp();
-    ctx.localStorage.setItem("nailflow_movimentacoes", JSON.stringify([{ ...dadosValidos(), id: "1" }]));
-    ctx.carregarMovimentacoes();
-    const resultado = ctx.atualizarMovimentacao("1", { ...dadosValidos(), valor: 200 });
-    assert.equal(typeof resultado, "boolean");
+  function isPromise(obj) {
+    return obj && typeof obj.then === 'function';
+  }
+
+  it("adicionarMovimentacaoAsync é função assíncrona", () => {
+    assert.equal(typeof ctx.adicionarMovimentacaoAsync, "function");
+    const resultado = ctx.adicionarMovimentacaoAsync(dadosValidos());
+    assert.ok(isPromise(resultado));
   });
 
-  it("API atual é síncrona - ExcluirMovimentacao retorna boolean, não Promise", () => {
-    const ctx = criarContextoApp();
-    ctx.localStorage.setItem("nailflow_movimentacoes", JSON.stringify([{ ...dadosValidos(), id: "1" }]));
-    ctx.carregarMovimentacoes();
-    const resultado = ctx.ExcluirMovimentacao("1");
-    assert.equal(typeof resultado, "boolean");
+  it("listarMovimentacoesAsync é função assíncrona", () => {
+    assert.equal(typeof ctx.listarMovimentacoesAsync, "function");
+    const resultado = ctx.listarMovimentacoesAsync();
+    assert.ok(isPromise(resultado));
   });
 
-  it("listarMovimentacoes retorna array direto, não Promise", () => {
-    const ctx = criarContextoApp();
-    const resultado = ctx.listarMovimentacoes();
-    assert.ok(Array.isArray(resultado));
+  it("buscarMovimentacaoPorIdAsync é função assíncrona", () => {
+    assert.equal(typeof ctx.buscarMovimentacaoPorIdAsync, "function");
+    const resultado = ctx.buscarMovimentacaoPorIdAsync("1");
+    assert.ok(isPromise(resultado));
   });
 
-  it("buscarMovimentacaoPorId retorna objeto direto, não Promise", () => {
-    const ctx = criarContextoApp();
-    ctx.localStorage.setItem("nailflow_movimentacoes", JSON.stringify([{ ...dadosValidos(), id: "1" }]));
-    ctx.carregarMovimentacoes();
-    const resultado = ctx.buscarMovimentacaoPorId("1");
-    assert.equal(typeof resultado, "object");
+  it("atualizarMovimentacaoAsync é função assíncrona", () => {
+    assert.equal(typeof ctx.atualizarMovimentacaoAsync, "function");
+    const resultado = ctx.atualizarMovimentacaoAsync("1", dadosValidos());
+    assert.ok(isPromise(resultado));
   });
 
-  it("salvarMovimentacoes/carregarMovimentacoes são síncronas e usam localStorage diretamente", () => {
-    const ctx = criarContextoApp();
-    // Estas funções não retornam Promise e acessam localStorage diretamente
-    assert.equal(typeof ctx.salvarMovimentacoes, "function");
-    assert.equal(typeof ctx.carregarMovimentacoes, "function");
+  it("excluirMovimentacaoAsync é função assíncrona", () => {
+    assert.equal(typeof ctx.excluirMovimentacaoAsync, "function");
+    const resultado = ctx.excluirMovimentacaoAsync("1");
+    assert.ok(isPromise(resultado));
   });
 
-  it("Estado global mutável (movimentacoes) impede isolamento de testes", () => {
-    const ctx1 = criarContextoApp();
-    const ctx2 = criarContextoApp();
-    ctx1.localStorage.setItem("nailflow_movimentacoes", JSON.stringify([{ ...dadosValidos(), id: "1" }]));
-    ctx1.carregarMovimentacoes();
-    // ctx2 não vê a movimentação do ctx1 - isolamento funciona por contexto vm
-    // Mas dentro do mesmo contexto, estado global é compartilhado
-    assert.equal(ctx1.listarMovimentacoes().length, 1);
-    assert.equal(ctx2.listarMovimentacoes().length, 0);
+  it("filtrarMovimentacoesPorPeriodoAsync é função assíncrona", () => {
+    assert.equal(typeof ctx.filtrarMovimentacoesPorPeriodoAsync, "function");
+    const resultado = ctx.filtrarMovimentacoesPorPeriodoAsync("", "");
+    assert.ok(isPromise(resultado));
+  });
+});
+
+describe("Inicialização e Reinicialização", () => {
+  let ctx;
+
+  beforeEach(() => {
+    ctx = criarContextoApp();
+    // Injeta repositório de memória para testar a interface assíncrona
+    const repo = criarRepositorioMemoriaParaTeste();
+    ctx._setRepositorioParaTeste(repo);
   });
 
-  it("Evento movimentacoes:atualizadas é síncrono e dispara após cada operação", () => {
-    const ctx = criarContextoApp();
-    let count = 0;
-    ctx.document.addEventListener("movimentacoes:atualizadas", () => count++);
+  function isPromise(obj) {
+    return obj && typeof obj.then === 'function';
+  }
 
-    ctx.adicionarMovimentacao(dadosValidos());
-    ctx.adicionarMovimentacao(dadosValidos());
-    ctx.localStorage.setItem("nailflow_movimentacoes", JSON.stringify([{ ...dadosValidos(), id: "1" }]));
-    ctx.carregarMovimentacoes();
-    ctx.atualizarMovimentacao("1", { ...dadosValidos(), valor: 200 });
-    ctx.ExcluirMovimentacao("1");
-
-    assert.equal(count, 4); // 2 adds + 1 update + 1 delete
+  it("reinicializarRepositorio é função assíncrona", () => {
+    assert.equal(typeof ctx.reinicializarRepositorio, "function");
+    const resultado = ctx.reinicializarRepositorio();
+    assert.ok(isPromise(resultado));
   });
 
-  it("configurarFormularioMovimentacao acopla DOM e localStorage - difícil testar isolado", () => {
-    const ctx = criarContextoApp();
-    // Esta função usa document.querySelector e FormData - requer DOM real
-    assert.equal(typeof ctx.configurarFormularioMovimentacao, "function");
+  it("_setRepositorioParaTeste permite injetar repo de memória", () => {
+    const repo = criarRepositorioMemoriaParaTeste();
+    repo.adicionar({ ...dadosValidos(), id: "test-1" });
+
+    ctx._setRepositorioParaTeste(repo);
+    assert.equal(ctx.listarMovimentacoes().length, 1);
+    assert.equal(ctx.listarMovimentacoes()[0].id, "test-1");
   });
 
-  it("iniciarAplicacao carrega do localStorage na inicialização - efeito colateral", () => {
-    const ctx = criarContextoApp();
+  it("_getRepositorioAtivo retorna tipo do repositório", () => {
+    // Antes de injetar, deve ser 'supabase' (tentativa de inicialização)
+    // Após injetar, deve ser 'memory'
+    const repo = criarRepositorioMemoriaParaTeste();
+    ctx._setRepositorioParaTeste(repo);
+    assert.equal(ctx.NailFlow.financeiro._getRepositorioAtivo(), 'memory');
+  });
+});
+
+describe("Sem Fallback Silencioso para localStorage em Produção", () => {
+  let ctx;
+
+  beforeEach(() => {
+    ctx = criarContextoApp();
+  });
+
+  it("API síncrona NÃO funciona sem repo de memória injetado (produção)", () => {
+    // Sem injetar repo de memória, as funções síncronas devem falhar/avisar
+    const ok = ctx.adicionarMovimentacao(dadosValidos());
+    assert.equal(ok, false); // Falha porque não há repo de memória
+  });
+
+  it("listarMovimentacoes retorna vazio sem repo de memória", () => {
+    const lista = ctx.listarMovimentacoes();
+    assert.equal(lista.length, 0);
+  });
+
+  it("buscarMovimentacaoPorId retorna undefined sem repo de memória", () => {
+    const r = ctx.buscarMovimentacaoPorId("1");
+    assert.equal(r, undefined);
+  });
+
+  it("atualizarMovimentacao retorna false sem repo de memória", () => {
+    const ok = ctx.atualizarMovimentacao("1", dadosValidos());
+    assert.equal(ok, false);
+  });
+
+  it("excluirMovimentacao retorna false sem repo de memória", () => {
+    const ok = ctx.excluirMovimentacao("1");
+    assert.equal(ok, false);
+  });
+
+  it("filtrarMovimentacoesPorPeriodo retorna vazio sem repo de memória", () => {
+    const r = ctx.filtrarMovimentacoesPorPeriodo("", "");
+    assert.equal(r.length, 0);
+  });
+
+  it("iniciarAplicacao NÃO carrega do localStorage automaticamente", () => {
+    // Preenche localStorage
     ctx.localStorage.setItem("nailflow_movimentacoes", JSON.stringify([dadosValidos()]));
     ctx.iniciarAplicacao();
-    assert.equal(ctx.listarMovimentacoes().length, 1);
+
+    // NÃO deve ter carregado do localStorage (repo ativo é 'supabase' em produção)
+    // A lista deve estar vazia até que Supabase carregue
+    assert.equal(ctx.listarMovimentacoes().length, 0);
+  });
+});
+
+describe("Isolamento de Testes (sem estado global compartilhado)", () => {
+  it("Contextos vm separados têm estado isolado", () => {
+    const ctx1 = criarContextoApp();
+    const ctx2 = criarContextoApp();
+
+    const repo1 = configurarContextoComRepoMemoria(ctx1);
+    repo1.adicionar({ ...dadosValidos(), id: "1" });
+
+    const repo2 = configurarContextoComRepoMemoria(ctx2);
+    // ctx2 não vê a movimentação do ctx1
+    assert.equal(ctx1.listarMovimentacoes().length, 1);
+    assert.equal(ctx2.listarMovimentacoes().length, 0);
   });
 });
