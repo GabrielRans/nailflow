@@ -373,7 +373,7 @@ async function processarLoginAsync(sessao, usuario) {
       dispararEvento('auth:unauthorized', {
         usuario,
         sessao,
-        mensagem: 'Usuário autenticado mas não vinculado a nenhum estúdio. Entre em contato com o administrador.'
+        mensagem: 'Sua conta não está vinculada a nenhum estúdio. Entre em contato com o suporte: nailflow.suporte@outlook.com'
       });
       // Também dispara auth:pronto com autorizado=false para UI saber o estado
       dispararEvento('auth:pronto', { autenticado: true, autorizado: false });

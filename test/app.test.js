@@ -756,3 +756,145 @@ describe("Isolamento de Testes (sem estado global compartilhado)", () => {
     assert.equal(ctx2.listarMovimentacoes().length, 0);
   });
 });
+
+describe("Auth - loginComEmail", () => {
+  let ctx;
+  let eventosAuth;
+
+  beforeEach(() => {
+    // Cria contexto com supabase mockado
+    const mockDocument = {
+      _eventos: {},
+      dispatchEvent(evento) {
+        if (this._eventos[evento.type]) {
+          this._eventos[evento.type].forEach(cb => cb(evento));
+        }
+        return true;
+      },
+      addEventListener(tipo, callback) {
+        this._eventos[tipo] = this._eventos[tipo] || [];
+        this._eventos[tipo].push(callback);
+      },
+      removeEventListener(tipo, callback) {
+        if (this._eventos[tipo]) {
+          this._eventos[tipo] = this._eventos[tipo].filter(cb => cb !== callback);
+        }
+      },
+      querySelector() { return null; }
+    };
+
+    const mockWindow = {
+      NailFlow: {},
+      dispatchEvent: mockDocument.dispatchEvent.bind(mockDocument),
+      addEventListener: mockDocument.addEventListener.bind(mockDocument),
+      removeEventListener: mockDocument.removeEventListener.bind(mockDocument),
+      localStorage: {
+        _store: {},
+        getItem(chave) { return this._store[chave] ?? null; },
+        setItem(chave, valor) { this._store[chave] = valor; },
+        removeItem(chave) { delete this._store[chave]; },
+        clear() { this._store = {}; }
+      }
+    };
+
+    const contexto = vm.createContext({
+      crypto: webcrypto,
+      window: mockWindow,
+      document: mockDocument,
+      CustomEvent: function(type, options = {}) {
+        this.type = type;
+        this.detail = options.detail;
+      },
+      console,
+      setTimeout,
+      clearTimeout,
+      // Mock do supabase
+      supabase: {
+        auth: {
+          onAuthStateChange: (callback) => {
+            // Mock que não faz nada - apenas para evitar erro na inicialização
+            return { data: { subscription: { unsubscribe: () => {} } } };
+          },
+          signInWithPassword: async ({ email, password }) => {
+            // Simula erro de credenciais inválidas
+            return {
+              data: { user: null, session: null },
+              error: new Error('Invalid login credentials')
+            };
+          },
+          getSession: async () => ({ data: { session: null } }),
+          signOut: async () => ({ error: null })
+        }
+      }
+    });
+
+    // Carrega o código do auth.js no contexto (substituindo o import e removendo exports)
+    const codigoAuth = fs.readFileSync("js/auth.js", "utf8")
+      .replace("import { supabase } from './supabase-client.js';", "// supabase mockado no contexto")
+      .replace(/export\s+/g, ""); // Remove 'export ' para funcionar no vm context
+
+    vm.runInContext(codigoAuth, contexto);
+
+    ctx = contexto;
+    eventosAuth = [];
+
+    // Captura eventos de auth
+    const tiposEventos = ['auth:login', 'auth:authenticated', 'auth:unauthorized', 'auth:logout', 'auth:erro', 'auth:pronto', 'auth:token-refresh'];
+    tiposEventos.forEach(tipo => {
+      contexto.document.addEventListener(tipo, (e) => {
+        eventosAuth.push({ tipo, detail: e.detail });
+      });
+    });
+  });
+
+  function isPromise(obj) {
+    return obj && typeof obj.then === 'function';
+  }
+
+  it("loginComEmail é função assíncrona", async () => {
+    assert.equal(typeof ctx.loginComEmail, "function");
+    const resultado = ctx.loginComEmail("test@test.com", "senha123");
+    assert.ok(isPromise(resultado));
+    // A promise rejeita porque o mock sempre retorna erro - capturamos para evitar unhandled rejection
+    await resultado.catch(() => {});
+  });
+
+  it("rejeita credenciais inválidas e dispara auth:erro", async () => {
+    const promise = ctx.loginComEmail("usuario@invalido.com", "senhaerrada");
+    assert.ok(isPromise(promise));
+
+    await promise.catch(() => {}); // Espera a promise rejeitar
+
+    // Verifica que auth:erro foi disparado
+    const eventosErro = eventosAuth.filter(e => e.tipo === 'auth:erro');
+    assert.ok(eventosErro.length > 0, "Deveria disparar auth:erro");
+
+    const erroDetail = eventosErro[0].detail;
+    // Verifica se a mensagem contém indicativo de erro de credencial
+    const msg = erroDetail.mensagem.toLowerCase();
+    assert.ok(
+      msg.includes("incorretos") ||
+      msg.includes("credencial") ||
+      msg.includes("tente novamente"),
+      `Mensagem de erro inesperada: ${erroDetail.mensagem}`
+    );
+    assert.ok(erroDetail.erro instanceof Error);
+  });
+
+  it("não dispara auth:login nem auth:authenticated em caso de erro", async () => {
+    await ctx.loginComEmail("usuario@invalido.com", "senhaerrada").catch(() => {});
+
+    const eventosLogin = eventosAuth.filter(e => e.tipo === 'auth:login');
+    const eventosAuthenticated = eventosAuth.filter(e => e.tipo === 'auth:authenticated');
+
+    assert.equal(eventosLogin.length, 0, "Não deve disparar auth:login com credenciais inválidas");
+    assert.equal(eventosAuthenticated.length, 0, "Não deve disparar auth:authenticated com credenciais inválidas");
+  });
+
+  it("não dispara auth:unauthorized em caso de erro de credenciais", async () => {
+    await ctx.loginComEmail("usuario@invalido.com", "senhaerrada").catch(() => {});
+
+    const eventosUnauthorized = eventosAuth.filter(e => e.tipo === 'auth:unauthorized');
+    assert.equal(eventosUnauthorized.length, 0, "Não deve disparar auth:unauthorized com credenciais inválidas (erro é de AuthN, não AuthZ)");
+  });
+});
