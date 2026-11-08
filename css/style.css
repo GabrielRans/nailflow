@@ -1,7 +1,7 @@
 /* =============================================================================
    NAILFLOW DESIGN SYSTEM
    ============================================================================= */
-/* Cores:
+/* Cores (Light Mode - padrão):
    --bg: #F5F6F8 (fundo da página)
    --card: #FFFFFF (cartões, containers)
    --text-primary: #26364D (texto principal)
@@ -16,7 +16,8 @@
    --focus: #7C435C (foco visível)
 */
 
-:root {
+:root,
+[data-theme="light"] {
   --bg: #F5F6F8;
   --card: #FFFFFF;
   --text-primary: #26364D;
@@ -38,6 +39,108 @@
   --radius: 12px;
   --radius-sm: 8px;
   --transition: 160ms ease;
+}
+
+/* =============================================================================
+   MODO ESCURO (Dark Mode)
+   ============================================================================= */
+[data-theme="dark"] {
+  --bg: #1A1D23;
+  --card: #242832;
+  --text-primary: #F0F2F5;
+  --text-secondary: #A0A8B8;
+  --primary: #B88A9C;
+  --primary-hover: #A07688;
+  --primary-active: #8A5E72;
+  --border: #3D4250;
+  --border-focus: #B88A9C;
+  --error-bg: #3D1A1A;
+  --error-border: #7A2E2E;
+  --error-text: #FCA5A5;
+  --google-bg: #242832;
+  --google-border: #3D4250;
+  --google-hover: #2D3240;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.2);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+/* Botão de alternância de tema */
+.btn-tema {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: color var(--transition), background-color var(--transition);
+  padding: 0;
+}
+
+.btn-tema:hover {
+  color: var(--text-primary);
+  background-color: rgba(124, 67, 92, 0.1);
+}
+
+.btn-tema:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.btn-tema svg {
+  width: 22px;
+  height: 22px;
+}
+
+/* Ícone de sol (visível no modo escuro) */
+.btn-tema .icone-sol {
+  display: none;
+}
+
+.btn-tema .icone-lua {
+  display: block;
+}
+
+/* Quando o tema é dark, mostra o sol e esconde a lua */
+[data-theme="dark"] .btn-tema .icone-sol {
+  display: block;
+}
+
+[data-theme="dark"] .btn-tema .icone-lua {
+  display: none;
+}
+
+/* Transição suave para mudança de tema */
+html {
+  transition: background-color var(--transition), color var(--transition);
+}
+
+body {
+  transition: background-color var(--transition), color var(--transition);
+}
+
+nav[aria-label="Navegação principal"] {
+  transition: background-color var(--transition), border-color var(--transition), box-shadow var(--transition);
+}
+
+.login-container {
+  transition: background-color var(--transition), box-shadow var(--transition);
+}
+
+.form-group input {
+  transition: border-color var(--transition), box-shadow var(--transition), background-color var(--transition), color var(--transition);
+}
+
+.btn {
+  transition: background-color var(--transition), border-color var(--transition), box-shadow var(--transition), transform var(--transition), color var(--transition);
+}
+
+.dashboard__card {
+  transition: background-color var(--transition), border-color var(--transition), box-shadow var(--transition);
 }
 
 * {

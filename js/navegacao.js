@@ -14,7 +14,8 @@ const ROTAS_VALIDAS = new Set([
   "movimentacao",
   "materiais",
   "cadastro-material",
-  "login"  // rota pública de login
+  "login",           // rota pública de login
+  "redefinir-senha"  // rota pública de redefinição de senha (via link mágico)
 ]);
 
 // Rotas que exigem autenticação E autorização (estudioId)
@@ -65,16 +66,20 @@ function exibirTela(rota) {
 }
 
 /**
- * Alterna visibilidade do app logado vs tela de login
+ * Alterna visibilidade do app logado vs tela de login vs tela de redefinição de senha
+ * @param {boolean} autenticado - Se o usuário está autenticado
+ * @param {boolean} emRedefinicaoSenha - Se está no fluxo de redefinição de senha
  */
-function alternarVisibilidadeApp(autenticado) {
+function alternarVisibilidadeApp(autenticado, emRedefinicaoSenha = false) {
   const appLogado = document.getElementById("app-logado");
   const telaLogin = document.getElementById("tela-login");
+  const telaRedefinirSenha = document.getElementById("tela-redefinir-senha");
   const btnLogout = document.getElementById("btn-logout");
 
-  if (appLogado) appLogado.hidden = !autenticado;
-  if (telaLogin) telaLogin.hidden = autenticado;
-  if (btnLogout) btnLogout.hidden = !autenticado;
+  if (appLogado) appLogado.hidden = !autenticado || emRedefinicaoSenha;
+  if (telaLogin) telaLogin.hidden = autenticado || emRedefinicaoSenha;
+  if (telaRedefinirSenha) telaRedefinirSenha.hidden = !emRedefinicaoSenha;
+  if (btnLogout) btnLogout.hidden = !autenticado || emRedefinicaoSenha;
 }
 
 /**
@@ -110,13 +115,16 @@ function atualizarNavegacao(gerenciarFocoAtivo = true) {
 
   const rota = obterRotaAtual();
 
-  // Proteger rota antes de exibir
-  if (!protegerRota(rota)) {
+  // Verificar se está no fluxo de redefinição de senha
+  const emRedefinicaoSenha = window.NailFlow?.auth?.emRedefinicaoSenha === true;
+
+  // Proteger rota antes de exibir (exceto redefinir-senha que é pública via token)
+  if (rota !== "redefinir-senha" && !protegerRota(rota)) {
     return; // Redirecionou para login
   }
 
   exibirTela(rota);
-  alternarVisibilidadeApp(estaAutenticado());
+  alternarVisibilidadeApp(estaAutenticado(), emRedefinicaoSenha);
 
   const areaPrincipal = {
     movimentacao: "financeiro",
@@ -366,6 +374,130 @@ function configurarLoginEmail() {
 }
 
 /**
+ * Handler do formulário de redefinição de senha
+ */
+function configurarRedefinirSenha() {
+  const form = document.getElementById("form-redefinir-senha");
+  if (!form) return;
+
+  const btnSalvar = document.getElementById("btn-salvar-senha");
+  const inputNovaSenha = document.getElementById("nova-senha");
+  const inputConfirmarSenha = document.getElementById("confirmar-senha");
+  const erroNovaSenha = document.getElementById("nova-senha-erro");
+  const erroConfirmarSenha = document.getElementById("confirmar-senha-erro");
+  const erroRedefinir = document.getElementById("redefinir-senha-erro");
+  const sucessoRedefinir = document.getElementById("redefinir-senha-sucesso");
+
+  // Toggle visibilidade da nova senha
+  const btnToggleNovaSenha = document.getElementById("btn-toggle-nova-senha");
+  if (btnToggleNovaSenha && inputNovaSenha) {
+    btnToggleNovaSenha.addEventListener("click", () => {
+      const isPassword = inputNovaSenha.type === "password";
+      inputNovaSenha.type = isPassword ? "text" : "password";
+      btnToggleNovaSenha.setAttribute("aria-pressed", isPassword.toString());
+      btnToggleNovaSenha.setAttribute("aria-label", isPassword ? "Ocultar senha" : "Mostrar senha");
+    });
+  }
+
+  // Toggle visibilidade da confirmação de senha
+  const btnToggleConfirmarSenha = document.getElementById("btn-toggle-confirmar-senha");
+  if (btnToggleConfirmarSenha && inputConfirmarSenha) {
+    btnToggleConfirmarSenha.addEventListener("click", () => {
+      const isPassword = inputConfirmarSenha.type === "password";
+      inputConfirmarSenha.type = isPassword ? "text" : "password";
+      btnToggleConfirmarSenha.setAttribute("aria-pressed", isPassword.toString());
+      btnToggleConfirmarSenha.setAttribute("aria-label", isPassword ? "Ocultar senha" : "Mostrar senha");
+    });
+  }
+
+  // Limpar erros ao digitar
+  [inputNovaSenha, inputConfirmarSenha].forEach(input => {
+    if (input) {
+      input.addEventListener("input", () => {
+        input.removeAttribute("aria-invalid");
+        const erroId = `${input.id}-erro`;
+        const erroEl = document.getElementById(erroId);
+        if (erroEl) erroEl.hidden = true;
+        if (erroRedefinir) erroRedefinir.hidden = true;
+        if (sucessoRedefinir) sucessoRedefinir.hidden = true;
+      });
+    }
+  });
+
+  // Submit do formulário
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+
+    // Limpar erros anteriores
+    if (erroNovaSenha) erroNovaSenha.hidden = true;
+    if (erroConfirmarSenha) erroConfirmarSenha.hidden = true;
+    if (erroRedefinir) erroRedefinir.hidden = true;
+    if (sucessoRedefinir) sucessoRedefinir.hidden = true;
+    inputNovaSenha?.removeAttribute("aria-invalid");
+    inputConfirmarSenha?.removeAttribute("aria-invalid");
+
+    const novaSenha = inputNovaSenha?.value;
+    const confirmarSenha = inputConfirmarSenha?.value;
+
+    // Validação client-side
+    let temErro = false;
+
+    if (!novaSenha) {
+      if (erroNovaSenha) {
+        erroNovaSenha.textContent = "Informe a nova senha.";
+        erroNovaSenha.hidden = false;
+      }
+      inputNovaSenha?.setAttribute("aria-invalid", "true");
+      temErro = true;
+    } else if (novaSenha.length < 6) {
+      if (erroNovaSenha) {
+        erroNovaSenha.textContent = "A senha deve ter pelo menos 6 caracteres.";
+        erroNovaSenha.hidden = false;
+      }
+      inputNovaSenha?.setAttribute("aria-invalid", "true");
+      temErro = true;
+    }
+
+    if (!confirmarSenha) {
+      if (erroConfirmarSenha) {
+        erroConfirmarSenha.textContent = "Confirme a nova senha.";
+        erroConfirmarSenha.hidden = false;
+      }
+      inputConfirmarSenha?.setAttribute("aria-invalid", "true");
+      temErro = true;
+    } else if (novaSenha !== confirmarSenha) {
+      if (erroConfirmarSenha) {
+        erroConfirmarSenha.textContent = "As senhas não coincidem.";
+        erroConfirmarSenha.hidden = false;
+      }
+      inputConfirmarSenha?.setAttribute("aria-invalid", "true");
+      temErro = true;
+    }
+
+    if (temErro) return;
+
+    // Estado de loading
+    if (btnSalvar) {
+      btnSalvar.disabled = true;
+      btnSalvar.setAttribute("aria-busy", "true");
+    }
+
+    try {
+      const { atualizarSenha } = await import("./auth.js");
+      await atualizarSenha(novaSenha);
+      // auth:password-updated event tratará o redirecionamento
+    } catch (err) {
+      console.error('[Navegação] Erro ao redefinir senha:', err);
+      if (btnSalvar) {
+        btnSalvar.disabled = false;
+        btnSalvar.setAttribute("aria-busy", "false");
+      }
+      // O erro já é tratado no auth.js e disparado via auth:erro
+    }
+  });
+}
+
+/**
  * Inicializa listeners de eventos de autenticação
  */
 function inicializarAuthListeners() {
@@ -373,7 +505,7 @@ function inicializarAuthListeners() {
   window.addEventListener("auth:login", (event) => {
     console.log('[Navegação] auth:login recebido', event.detail);
     authInicializado = true;
-    alternarVisibilidadeApp(true);
+    alternarVisibilidadeApp(true, false);
 
     // Se estava na tela de login, redirecionar para dashboard
     const rotaAtual = obterRotaAtual();
@@ -389,7 +521,7 @@ function inicializarAuthListeners() {
     console.log('[Navegação] auth:unauthorized recebido', event.detail);
     authInicializado = true;
     // Mostra tela de login com mensagem de erro
-    alternarVisibilidadeApp(false);
+    alternarVisibilidadeApp(false, false);
     const erroEl = document.getElementById("login-erro");
     if (erroEl) {
       erroEl.textContent = event.detail.mensagem || "Usuário não vinculado a nenhum estúdio.";
@@ -408,7 +540,7 @@ function inicializarAuthListeners() {
   // Logout
   window.addEventListener("auth:logout", (event) => {
     console.log('[Navegação] auth:logout recebido', event.detail);
-    alternarVisibilidadeApp(false);
+    alternarVisibilidadeApp(false, false);
     window.location.hash = "#login";
   });
 
@@ -429,8 +561,24 @@ function inicializarAuthListeners() {
     // Exibe app apenas se autenticado E autorizado
     const autenticado = event.detail.autenticado === true;
     const autorizado = event.detail.autorizado === true;
-    alternarVisibilidadeApp(autenticado && autorizado);
+    alternarVisibilidadeApp(autenticado && autorizado, false);
     atualizarNavegacao(false);
+  });
+
+  // Fluxo de redefinição de senha iniciado (PASSWORD_RECOVERY)
+  window.addEventListener("auth:password-recovery", (event) => {
+    console.log('[Navegação] auth:password-recovery recebido', event.detail);
+    authInicializado = true;
+    // Mostra tela de redefinição de senha
+    alternarVisibilidadeApp(false, true);
+    window.location.hash = "#redefinir-senha";
+  });
+
+  // Senha atualizada com sucesso
+  window.addEventListener("auth:password-updated", (event) => {
+    console.log('[Navegação] auth:password-updated recebido', event.detail);
+    // Limpa estado de redefinição e redireciona para dashboard
+    window.location.hash = "#dashboard";
   });
 }
 
@@ -444,6 +592,7 @@ document.addEventListener("DOMContentLoaded", () => {
   configurarLogout();
   configurarLogin();
   configurarLoginEmail();
+  configurarRedefinirSenha();
   inicializarAuthListeners();
 
   // Verificar se auth já inicializou (race condition: auth:pronto pode ter disparado antes do listener)
@@ -452,7 +601,8 @@ document.addEventListener("DOMContentLoaded", () => {
     // Exibe app apenas se autenticado E autorizado
     const autenticado = window.NailFlow.auth.autenticado === true;
     const autorizado = window.NailFlow.auth.autorizado === true;
-    alternarVisibilidadeApp(autenticado && autorizado);
+    const emRedefinicaoSenha = window.NailFlow.auth.emRedefinicaoSenha === true;
+    alternarVisibilidadeApp(autenticado && autorizado, emRedefinicaoSenha);
     atualizarNavegacao(false);
   }
   // Se não inicializado, aguarda auth:pronto
