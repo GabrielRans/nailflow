@@ -270,15 +270,31 @@ document.addEventListener("movimentacoes:atualizadas", (event) => {
   }
 });
 
-// Renderiza os dados iniciais quando o módulo financeiro estiver pronto
-document.addEventListener("DOMContentLoaded", async () => {
-  // Aguarda o financeiro inicializar (auth + repo)
-  if (window.NailFlow?.financeiro) {
-    await carregarTodas();
-  } else {
-    // Fallback: aguarda evento de auth
-    window.addEventListener('auth:login', async () => {
-      await carregarTodas();
-    }, { once: true });
+// Renderiza os dados iniciais quando o usuário estiver autenticado E autorizado
+function inicializarMovimentacoes() {
+  // Se já autenticado e autorizado, carrega imediatamente
+  if (window.NailFlow?.auth?.autorizado === true) {
+    carregarTodas();
+    return;
   }
-});
+
+  // Caso contrário, aguarda o evento auth:login (AuthN + AuthZ OK)
+  window.addEventListener('auth:login', async () => {
+    await carregarTodas();
+  }, { once: true });
+}
+
+// Limpa a lista no logout
+window.addEventListener('auth:logout', () => {
+  listaMovimentacoes.replaceChildren();
+  const itemVazio = document.createElement("li");
+  itemVazio.className = "movimentacoes-vazio";
+  itemVazio.setAttribute("role", "status");
+  const tituloVazio = document.createElement("strong");
+  tituloVazio.textContent = "Faça login para ver suas movimentações";
+  itemVazio.append(tituloVazio);
+  listaMovimentacoes.append(itemVazio);
+})
+
+// Inicializa no DOMContentLoaded
+document.addEventListener("DOMContentLoaded", inicializarMovimentacoes);
