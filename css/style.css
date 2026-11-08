@@ -45,20 +45,20 @@
    MODO ESCURO (Dark Mode)
    ============================================================================= */
 [data-theme="dark"] {
-  --bg: #1A1D23;
-  --card: #242832;
-  --text-primary: #F0F2F5;
-  --text-secondary: #A0A8B8;
-  --primary: #63354C;
-  --primary-hover: #7A3E5A;
-  --primary-active: #4F2A3A;
-  --border: #3D4250;
-  --border-focus: #8A5E72;
-  --error-bg: #3D1A1A;
-  --error-border: #7A2E2E;
+  --bg: #121212;
+  --card: #1E1E24;
+  --text-primary: #E2E8F0;
+  --text-secondary: #94A3B8;
+  --primary: #7C435C;
+  --primary-hover: #9A5573;
+  --primary-active: #66374B;
+  --border: #334155;
+  --border-focus: #9A5573;
+  --error-bg: #451A1A;
+  --error-border: #7F1D1D;
   --error-text: #FCA5A5;
-  --google-bg: #242832;
-  --google-border: #3D4250;
+  --google-bg: #1E1E24;
+  --google-border: #334155;
   --google-hover: #2D3240;
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.2);
   --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.3);
@@ -83,7 +83,7 @@
 
 .btn-tema:hover {
   color: var(--text-primary);
-  background-color: rgba(124, 67, 92, 0.1);
+  background-color: color-mix(in srgb, var(--primary) 10%, transparent);
 }
 
 .btn-tema:focus-visible {
@@ -156,7 +156,7 @@ html {
 body {
     margin: 0;
     font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    color: #26364D;
+    color: var(--text-primary);
     min-height: 100vh;
     display: flex;
     flex-direction: column;
@@ -212,9 +212,9 @@ a[href="#cadastro-material"] {
   min-height: 44px;
   min-width: 44px;
   padding: 10px 16px;
-  border: 1px solid #7C435C;
+  border: 1px solid var(--primary);
   border-radius: 12px;
-  background-color: #7C435C;
+  background-color: var(--primary);
   color: #FFFFFF;
   font-family: inherit;
   font-size: 1rem;
@@ -227,13 +227,13 @@ a[href="#cadastro-material"] {
 
 a[href="#movimentacao"]:hover,
 a[href="#cadastro-material"]:hover {
-  background-color: #63344A;
-  border-color: #63344A;
+  background-color: var(--primary-hover);
+  border-color: var(--primary-hover);
 }
 
 a[href="#movimentacao"]:focus-visible,
 a[href="#cadastro-material"]:focus-visible {
-  outline: 3px solid #7C435C;
+  outline: 3px solid var(--focus);
   outline-offset: 2px;
 }
 
@@ -245,10 +245,10 @@ a[href="#cadastro-material"]:focus-visible {
   min-height: 44px;
   min-width: 44px;
   padding: 10px 16px;
-  border: 1px solid #667085;
+  border: 1px solid var(--border);
   border-radius: 12px;
-  background-color: #FFFFFF;
-  color: #26364D;
+  background-color: var(--card);
+  color: var(--text-primary);
   font-family: inherit;
   font-size: 1rem;
   font-weight: 600;
@@ -259,12 +259,12 @@ a[href="#cadastro-material"]:focus-visible {
 }
 
 [data-tela="cadastro-material"] a[href="#materiais"]:hover {
-  background-color: #F8FAFC;
-  border-color: #26364D;
+  background-color: var(--bg);
+  border-color: var(--text-primary);
 }
 
 [data-tela="cadastro-material"] a[href="#materiais"]:focus-visible {
-  outline: 3px solid #7C435C;
+  outline: 3px solid var(--focus);
   outline-offset: 2px;
 }
 
@@ -378,7 +378,7 @@ nav a[data-rota] {
 }
 
 nav a[data-rota]:hover {
-  background-color: rgba(124, 67, 92, 0.1);
+  background-color: color-mix(in srgb, var(--primary) 10%, transparent);
   color: var(--primary-hover);
 }
 
@@ -400,7 +400,7 @@ nav a[data-rota][aria-current="page"] {
 }
 
 .nav-logout:hover {
-  background: #FEE2E2;
+  background: var(--error-border);
   border-color: var(--error-text);
 }
 
@@ -481,21 +481,21 @@ nav a[data-rota][aria-current="page"] {
 }
 
 .form-group input::placeholder {
-  color: #9CA3AF;
+  color: var(--text-secondary);
 }
 
 .form-group input:hover:not(:disabled) {
-  border-color: #9CA3AF;
+  border-color: var(--text-secondary);
 }
 
 .form-group input:focus {
   outline: none;
   border-color: var(--border-focus);
-  box-shadow: 0 0 0 3px rgba(124, 67, 92, 0.15);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 15%, transparent);
 }
 
 .form-group input:disabled {
-  background-color: #F3F4F6;
+  background-color: var(--bg);
   cursor: not-allowed;
 }
 
@@ -536,7 +536,7 @@ nav a[data-rota][aria-current="page"] {
 
 .btn-toggle-senha:hover {
   color: var(--text-primary);
-  background-color: rgba(38, 54, 77, 0.05);
+  background-color: color-mix(in srgb, var(--text-primary) 5%, transparent);
 }
 
 .btn-toggle-senha:focus-visible {
