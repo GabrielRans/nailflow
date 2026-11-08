@@ -2,10 +2,18 @@
  * Módulo de Autenticação - NailFlow
  * Gerencia login Google OAuth, logout, sessão e estado global via CustomEvents
  *
+ * Separação de responsabilidades:
+ * - AUTENTICAÇÃO (AuthN): Identidade verificada via Google OAuth (sessão válida, usuário conhecido)
+ * - AUTORIZAÇÃO (AuthZ): Acesso ao NailFlow requer vínculo com um estúdio (estudioId válido)
+ *
  * Eventos disparados:
- * - auth:login   → detail: { usuario, estudioId, sessao }
- * - auth:logout  → detail: { motivo }
- * - auth:erro    → detail: { mensagem, erro }
+ * - auth:login       → detail: { usuario, estudioId, sessao } (após AuthN + AuthZ OK)
+ * - auth:authenticated → detail: { usuario, sessao } (apenas AuthN OK, sem estudioId)
+ * - auth:unauthorized  → detail: { usuario, sessao, mensagem } (AuthN OK, mas sem AuthZ)
+ * - auth:logout      → detail: { motivo }
+ * - auth:erro        → detail: { mensagem, erro }
+ * - auth:pronto      → detail: { autenticado, autorizado } (estado inicial após init)
+ * - auth:token-refresh → detail: { sessao }
  */
 
 import { supabase } from './supabase-client.js';
@@ -19,6 +27,8 @@ const estadoAuth = {
   usuario: null,
   estudioId: null,
   inicializado: false,
+  autenticado: false,    // AuthN: tem sessão válida + usuário
+  autorizado: false,     // AuthZ: tem estudioId válido (vínculo com estúdio)
 };
 
 // Fallback síncrono para scripts clássicos (não ES modules)
@@ -28,7 +38,8 @@ window.NailFlow.auth = {
   sessao: null,
   usuario: null,
   estudioId: null,
-  autenticado: false,
+  autenticado: false,    // AuthN
+  autorizado: false,     // AuthZ
   inicializado: false,
 };
 
@@ -72,15 +83,21 @@ async function buscarEstudioIdDoUsuario(userId) {
 // =============================================================================
 
 function atualizarEstadoAuth(sessao, usuario, estudioId) {
+  const autenticado = !!sessao && !!usuario;
+  const autorizado = autenticado && !!estudioId;
+
   estadoAuth.sessao = sessao;
   estadoAuth.usuario = usuario;
   estadoAuth.estudioId = estudioId;
   estadoAuth.inicializado = true;
+  estadoAuth.autenticado = autenticado;
+  estadoAuth.autorizado = autorizado;
 
   window.NailFlow.auth.sessao = sessao;
   window.NailFlow.auth.usuario = usuario;
   window.NailFlow.auth.estudioId = estudioId;
-  window.NailFlow.auth.autenticado = !!sessao && !!usuario;
+  window.NailFlow.auth.autenticado = autenticado;
+  window.NailFlow.auth.autorizado = autorizado;
   window.NailFlow.auth.inicializado = true;
 }
 
@@ -89,18 +106,25 @@ function limparEstadoAuth() {
   estadoAuth.usuario = null;
   estadoAuth.estudioId = null;
   estadoAuth.inicializado = true;
+  estadoAuth.autenticado = false;
+  estadoAuth.autorizado = false;
 
   window.NailFlow.auth.sessao = null;
   window.NailFlow.auth.usuario = null;
   window.NailFlow.auth.estudioId = null;
   window.NailFlow.auth.autenticado = false;
+  window.NailFlow.auth.autorizado = false;
   window.NailFlow.auth.inicializado = true;
 }
 
-function marcarInicializado(autenticado = false) {
+function marcarInicializado(autenticado = false, autorizado = false) {
   estadoAuth.inicializado = true;
+  estadoAuth.autenticado = autenticado;
+  estadoAuth.autorizado = autorizado;
+
   window.NailFlow.auth.inicializado = true;
   window.NailFlow.auth.autenticado = autenticado;
+  window.NailFlow.auth.autorizado = autorizado;
 }
 
 // =============================================================================
@@ -130,6 +154,47 @@ export async function loginComGoogle() {
     console.error('[Auth] Erro ao iniciar login Google:', err);
     dispararEvento('auth:erro', {
       mensagem: 'Não foi possível iniciar o login com Google. Tente novamente.',
+      erro: err
+    });
+    throw err;
+  }
+}
+
+/**
+ * Realiza login com email e senha
+ * @param {string} email - Email do usuário
+ * @param {string} senha - Senha do usuário
+ */
+export async function loginComEmail(email, senha) {
+  try {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password: senha,
+    });
+
+    if (error) throw error;
+
+    // onAuthStateChange('SIGNED_IN') disparará processarLoginAsync
+    // Não precisamos fazer nada aqui, o fluxo segue pelo listener
+  } catch (err) {
+    console.error('[Auth] Erro ao fazer login com email:', err);
+
+    // Mapear erros comuns do Supabase para mensagens amigáveis
+    let mensagem = 'Erro ao fazer login. Verifique suas credenciais e tente novamente.';
+
+    if (err.message) {
+      const msg = err.message.toLowerCase();
+      if (msg.includes('invalid login credentials') || msg.includes('invalid credentials')) {
+        mensagem = 'E-mail ou senha incorretos. Tente novamente.';
+      } else if (msg.includes('email not confirmed')) {
+        mensagem = 'E-mail não confirmado. Verifique sua caixa de entrada.';
+      } else if (msg.includes('too many requests')) {
+        mensagem = 'Muitas tentativas. Aguarde alguns minutos e tente novamente.';
+      }
+    }
+
+    dispararEvento('auth:erro', {
+      mensagem,
       erro: err
     });
     throw err;
@@ -171,10 +236,20 @@ export async function obterSessaoAtual() {
 
 /**
  * Verifica se há sessão válida no momento (síncrono, para uso imediato)
+ * AuthN: sessão + usuário válidos
  * @returns {boolean}
  */
 export function estaAutenticado() {
-  return !!estadoAuth.sessao && !!estadoAuth.usuario;
+  return estadoAuth.autenticado;
+}
+
+/**
+ * Verifica se o usuário está autorizado (AuthN + AuthZ)
+ * Requer sessão válida + estudioId (vínculo com estúdio)
+ * @returns {boolean}
+ */
+export function estaAutorizado() {
+  return estadoAuth.autorizado;
 }
 
 /**
@@ -198,24 +273,27 @@ export async function inicializarAuth() {
   console.log('[Auth] Inicializando sistema de autenticação...');
 
   // 1. Listener para mudanças de estado (login, logout, refresh token)
-  supabase.auth.onAuthStateChange(async (event, sessao) => {
+  // IMPORTANTE: Callback síncrono - NÃO fazer chamadas async/await aqui
+  // O processamento assíncrono (buscar estudioId) é delegado para processarLoginAsync
+  supabase.auth.onAuthStateChange((event, sessao) => {
     console.log('[Auth] Evento:', event, sessao ? 'com sessão' : 'sem sessão');
 
     switch (event) {
       case 'INITIAL_SESSION':
         // Sessão recuperada do storage ao carregar a página
         if (sessao?.user) {
-          await processarLogin(sessao, sessao.user);
+          // Dispara processamento assíncrono sem bloquear o callback
+          processarLoginAsync(sessao, sessao.user);
         } else {
-          marcarInicializado(false);
-          dispararEvento('auth:pronto', { autenticado: false });
+          marcarInicializado(false, false);
+          dispararEvento('auth:pronto', { autenticado: false, autorizado: false });
         }
         break;
 
       case 'SIGNED_IN':
         // Login bem-sucedido (após OAuth redirect)
         if (sessao?.user) {
-          await processarLogin(sessao, sessao.user);
+          processarLoginAsync(sessao, sessao.user);
         }
         break;
 
@@ -225,7 +303,7 @@ export async function inicializarAuth() {
         break;
 
       case 'TOKEN_REFRESHED':
-        // Token renovado automaticamente
+        // Token renovado automaticamente - mantém estado atual
         if (sessao?.user) {
           atualizarEstadoAuth(sessao, sessao.user, estadoAuth.estudioId);
           dispararEvento('auth:token-refresh', { sessao });
@@ -233,7 +311,7 @@ export async function inicializarAuth() {
         break;
 
       case 'USER_UPDATED':
-        // Perfil atualizado
+        // Perfil atualizado - mantém estado atual
         if (sessao?.user) {
           atualizarEstadoAuth(sessao, sessao.user, estadoAuth.estudioId);
         }
@@ -248,34 +326,58 @@ export async function inicializarAuth() {
   // (onAuthStateChange com INITIAL_SESSION já faz isso, mas garantimos)
   const { data: { session } } = await supabase.auth.getSession();
   if (session?.user) {
-    await processarLogin(session, session.user);
+    await processarLoginAsync(session, session.user);
   } else {
-    marcarInicializado(false);
-    dispararEvento('auth:pronto', { autenticado: false });
+    marcarInicializado(false, false);
+    dispararEvento('auth:pronto', { autenticado: false, autorizado: false });
   }
 }
 
 /**
- * Processa login bem-sucedido: busca estudio_id e atualiza estado
+ * Processa login bem-sucedido de forma assíncrona (fora do callback onAuthStateChange)
+ * Busca estudio_id e atualiza estado, disparando eventos apropriados
  */
-async function processarLogin(sessao, usuario) {
+async function processarLoginAsync(sessao, usuario) {
   try {
     // Buscar estudio_id vinculado a este usuário
     const estudioId = await buscarEstudioIdDoUsuario(usuario.id);
+
+    const autenticado = true;
+    const autorizado = !!estudioId;
 
     atualizarEstadoAuth(sessao, usuario, estudioId);
 
     console.log('[Auth] Login processado:', {
       userId: usuario.id,
       email: usuario.email,
-      estudioId
+      estudioId,
+      autenticado,
+      autorizado
     });
 
-    dispararEvento('auth:login', {
+    // Sempre dispara auth:authenticated (AuthN OK)
+    dispararEvento('auth:authenticated', {
       usuario,
-      estudioId,
       sessao
     });
+
+    if (autorizado) {
+      // AuthN + AuthZ OK - usuário pode acessar o app
+      dispararEvento('auth:login', {
+        usuario,
+        estudioId,
+        sessao
+      });
+    } else {
+      // AuthN OK mas sem AuthZ - usuário autenticado mas sem estúdio vinculado
+      dispararEvento('auth:unauthorized', {
+        usuario,
+        sessao,
+        mensagem: 'Usuário autenticado mas não vinculado a nenhum estúdio. Entre em contato com o administrador.'
+      });
+      // Também dispara auth:pronto com autorizado=false para UI saber o estado
+      dispararEvento('auth:pronto', { autenticado: true, autorizado: false });
+    }
   } catch (err) {
     console.error('[Auth] Erro ao processar login:', err);
     dispararEvento('auth:erro', {
@@ -319,6 +421,7 @@ export const authState = {
   get sessao() { return estadoAuth.sessao; },
   get usuario() { return estadoAuth.usuario; },
   get estudioId() { return estadoAuth.estudioId; },
-  get autenticado() { return !!estadoAuth.sessao && !!estadoAuth.usuario; },
+  get autenticado() { return estadoAuth.autenticado; },
+  get autorizado() { return estadoAuth.autorizado; },
   get inicializado() { return estadoAuth.inicializado; },
 };

@@ -1,6 +1,11 @@
 /**
- * Navegação com Hash Routing + Proteção de Rotas por Autenticação
- * Integra com eventos CustomEvents do módulo auth.js (auth:login, auth:logout)
+ * Navegação com Hash Routing + Proteção de Rotas por Autenticação e Autorização
+ * Integra com eventos CustomEvents do módulo auth.js
+ *
+ * Proteção em duas camadas:
+ * - Autenticação (AuthN): usuário logado via Google OAuth
+ * - Autorização (AuthZ): usuário vinculado a um estúdio (estudioId válido)
+ * Rotas protegidas exigem AMBAS as condições
  */
 
 const ROTAS_VALIDAS = new Set([
@@ -12,7 +17,7 @@ const ROTAS_VALIDAS = new Set([
   "login"  // rota pública de login
 ]);
 
-// Rotas que exigem autenticação
+// Rotas que exigem autenticação E autorização (estudioId)
 const ROTAS_PROTEGIDAS = new Set([
   "dashboard",
   "financeiro",
@@ -27,10 +32,18 @@ let rotaAnterior = null;
 let authInicializado = false;
 
 /**
- * Verifica se usuário está autenticado (via window.NailFlow.auth fallback síncrono)
+ * Verifica se usuário está autenticado (AuthN: sessão + usuário válidos)
  */
 function estaAutenticado() {
   return window.NailFlow?.auth?.autenticado === true;
+}
+
+/**
+ * Verifica se usuário está autorizado (AuthN + AuthZ: estudioId válido)
+ * Rotas protegidas exigem AMBAS as condições
+ */
+function estaAutorizado() {
+  return window.NailFlow?.auth?.autorizado === true;
 }
 
 /**
@@ -65,13 +78,21 @@ function alternarVisibilidadeApp(autenticado) {
 }
 
 /**
- * Redireciona para login se rota protegida e não autenticado
+ * Redireciona para login se rota protegida e não autenticado/autorizado
+ * Rotas protegidas exigem: autenticação (AuthN) + autorização (AuthZ = estudioId válido)
  */
 function protegerRota(rota) {
-  if (ROTAS_PROTEGIDAS.has(rota) && !estaAutenticado()) {
-    console.log('[Navegação] Rota protegida acessada sem autenticação → redirecionando para #login');
-    window.location.hash = "#login";
-    return false;
+  if (ROTAS_PROTEGIDAS.has(rota)) {
+    if (!estaAutenticado()) {
+      console.log('[Navegação] Rota protegida acessada sem autenticação → redirecionando para #login');
+      window.location.hash = "#login";
+      return false;
+    }
+    if (!estaAutorizado()) {
+      console.log('[Navegação] Rota protegida acessada sem autorização (sem estúdio vinculado) → redirecionando para #login');
+      window.location.hash = "#login";
+      return false;
+    }
   }
   return true;
 }
@@ -186,13 +207,14 @@ function configurarLogin() {
     btnLogin.addEventListener("click", async () => {
       try {
         btnLogin.disabled = true;
-        btnLogin.textContent = "Redirecionando...";
+        btnLogin.setAttribute("aria-busy", "true");
         const { loginComGoogle } = await import("./auth.js");
         await loginComGoogle();
         // onAuthStateChange → auth:login → UI atualizada
       } catch (err) {
         console.error('[Navegação] Erro ao iniciar login:', err);
         btnLogin.disabled = false;
+        btnLogin.setAttribute("aria-busy", "false");
         btnLogin.innerHTML = `
           <svg class="google-icon" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
             <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -208,10 +230,146 @@ function configurarLogin() {
 }
 
 /**
+ * Handler do formulário de login com email/senha
+ */
+function configurarLoginEmail() {
+  const form = document.getElementById("form-login");
+  if (!form) return;
+
+  const btnLogin = document.getElementById("btn-login-email");
+  const btnToggleSenha = document.getElementById("btn-toggle-senha");
+  const inputSenha = document.getElementById("senha");
+  const inputEmail = document.getElementById("email");
+  const erroEmail = document.getElementById("email-erro");
+  const erroSenha = document.getElementById("senha-erro");
+  const erroLogin = document.getElementById("login-erro");
+
+  // Toggle visibilidade da senha
+  if (btnToggleSenha && inputSenha) {
+    btnToggleSenha.addEventListener("click", () => {
+      const isPassword = inputSenha.type === "password";
+      inputSenha.type = isPassword ? "text" : "password";
+      btnToggleSenha.setAttribute("aria-pressed", isPassword.toString());
+      btnToggleSenha.setAttribute("aria-label", isPassword ? "Ocultar senha" : "Mostrar senha");
+    });
+  }
+
+  // Handler "Esqueceu a senha?"
+  const linkEsqueciSenha = document.getElementById("link-esqueci-senha");
+  if (linkEsqueciSenha) {
+    linkEsqueciSenha.addEventListener("click", async (event) => {
+      event.preventDefault();
+      const email = inputEmail?.value?.trim();
+      if (!email) {
+        alert("Informe seu e-mail no campo acima para recuperar a senha.");
+        inputEmail?.focus();
+        return;
+      }
+      try {
+        const { supabase } = await import("./supabase-client.js");
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: window.location.origin,
+        });
+        if (error) throw error;
+        alert("E-mail de recuperação enviado! Verifique sua caixa de entrada.");
+      } catch (err) {
+        console.error('[Navegação] Erro ao enviar e-mail de recuperação:', err);
+        alert("Não foi possível enviar o e-mail de recuperação. Tente novamente.");
+      }
+    });
+  }
+
+  // Limpar erros ao digitar
+  [inputEmail, inputSenha].forEach(input => {
+    if (input) {
+      input.addEventListener("input", () => {
+        input.removeAttribute("aria-invalid");
+        const erroId = `${input.id}-erro`;
+        const erroEl = document.getElementById(erroId);
+        if (erroEl) erroEl.hidden = true;
+        if (erroLogin) erroLogin.hidden = true;
+      });
+    }
+  });
+
+  // Submit do formulário
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+
+    // Limpar erros anteriores
+    if (erroEmail) erroEmail.hidden = true;
+    if (erroSenha) erroSenha.hidden = true;
+    if (erroLogin) erroLogin.hidden = true;
+    inputEmail?.removeAttribute("aria-invalid");
+    inputSenha?.removeAttribute("aria-invalid");
+
+    const email = inputEmail?.value?.trim();
+    const senha = inputSenha?.value;
+
+    // Validação client-side
+    let temErro = false;
+
+    if (!email) {
+      if (erroEmail) {
+        erroEmail.textContent = "Informe seu e-mail.";
+        erroEmail.hidden = false;
+      }
+      inputEmail?.setAttribute("aria-invalid", "true");
+      temErro = true;
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      if (erroEmail) {
+        erroEmail.textContent = "Informe um e-mail válido.";
+        erroEmail.hidden = false;
+      }
+      inputEmail?.setAttribute("aria-invalid", "true");
+      temErro = true;
+    }
+
+    if (!senha) {
+      if (erroSenha) {
+        erroSenha.textContent = "Informe sua senha.";
+        erroSenha.hidden = false;
+      }
+      inputSenha?.setAttribute("aria-invalid", "true");
+      temErro = true;
+    } else if (senha.length < 6) {
+      if (erroSenha) {
+        erroSenha.textContent = "A senha deve ter pelo menos 6 caracteres.";
+        erroSenha.hidden = false;
+      }
+      inputSenha?.setAttribute("aria-invalid", "true");
+      temErro = true;
+    }
+
+    if (temErro) return;
+
+    // Estado de loading
+    if (btnLogin) {
+      btnLogin.disabled = true;
+      btnLogin.setAttribute("aria-busy", "true");
+    }
+
+    try {
+      const { loginComEmail } = await import("./auth.js");
+      await loginComEmail(email, senha);
+      // onAuthStateChange → auth:login → UI atualizada
+    } catch (err) {
+      console.error('[Navegação] Erro ao fazer login:', err);
+      if (btnLogin) {
+        btnLogin.disabled = false;
+        btnLogin.setAttribute("aria-busy", "false");
+      }
+      // O erro já é tratado no auth.js e disparado via auth:erro
+      // Mas podemos mostrar erro específico no formulário se necessário
+    }
+  });
+}
+
+/**
  * Inicializa listeners de eventos de autenticação
  */
 function inicializarAuthListeners() {
-  // Login bem-sucedido
+  // Login bem-sucedido (AuthN + AuthZ OK - usuário tem estúdio vinculado)
   window.addEventListener("auth:login", (event) => {
     console.log('[Navegação] auth:login recebido', event.detail);
     authInicializado = true;
@@ -224,6 +382,27 @@ function inicializarAuthListeners() {
     } else {
       atualizarNavegacao();
     }
+  });
+
+  // Usuário autenticado mas não autorizado (sem estúdio vinculado)
+  window.addEventListener("auth:unauthorized", (event) => {
+    console.log('[Navegação] auth:unauthorized recebido', event.detail);
+    authInicializado = true;
+    // Mostra tela de login com mensagem de erro
+    alternarVisibilidadeApp(false);
+    const erroEl = document.getElementById("login-erro");
+    if (erroEl) {
+      erroEl.textContent = event.detail.mensagem || "Usuário não vinculado a nenhum estúdio.";
+      erroEl.hidden = false;
+    }
+    window.location.hash = "#login";
+  });
+
+  // Apenas autenticado (AuthN OK) - para UI que precise saber
+  window.addEventListener("auth:authenticated", (event) => {
+    console.log('[Navegação] auth:authenticated recebido', event.detail);
+    authInicializado = true;
+    // Não altera visibilidade aqui - aguarda auth:login ou auth:unauthorized
   });
 
   // Logout
@@ -247,7 +426,10 @@ function inicializarAuthListeners() {
   window.addEventListener("auth:pronto", (event) => {
     console.log('[Navegação] auth:pronto', event.detail);
     authInicializado = true;
-    alternarVisibilidadeApp(event.detail.autenticado);
+    // Exibe app apenas se autenticado E autorizado
+    const autenticado = event.detail.autenticado === true;
+    const autorizado = event.detail.autorizado === true;
+    alternarVisibilidadeApp(autenticado && autorizado);
     atualizarNavegacao(false);
   });
 }
@@ -261,12 +443,16 @@ window.addEventListener("hashchange", atualizarNavegacao);
 document.addEventListener("DOMContentLoaded", () => {
   configurarLogout();
   configurarLogin();
+  configurarLoginEmail();
   inicializarAuthListeners();
 
   // Verificar se auth já inicializou (race condition: auth:pronto pode ter disparado antes do listener)
   if (window.NailFlow?.auth?.inicializado) {
     console.log('[Navegação] Auth já inicializado no DOMContentLoaded, aplicando estado atual');
-    alternarVisibilidadeApp(window.NailFlow.auth.autenticado);
+    // Exibe app apenas se autenticado E autorizado
+    const autenticado = window.NailFlow.auth.autenticado === true;
+    const autorizado = window.NailFlow.auth.autorizado === true;
+    alternarVisibilidadeApp(autenticado && autorizado);
     atualizarNavegacao(false);
   }
   // Se não inicializado, aguarda auth:pronto
