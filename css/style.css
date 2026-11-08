@@ -4,7 +4,8 @@
 
 body {
   margin: 0;
-  font-family: Arial, sans-serif;
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  color: #26364D;
 }
 
 main {
@@ -33,4 +34,78 @@ button {
 
 [hidden] {
   display: none !important;
+}
+
+/* Contêiner para centralização de ações principais (F01, F02, F04, F05) */
+.container-acao {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  text-align: center;
+}
+
+/* Links de acesso aos fluxos F03 e F05 (alvo mínimo de toque 44 × 44 px — WCAG 2.5.5) */
+a[href="#movimentacao"],
+a[href="#cadastro-material"] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  min-width: 44px;
+  padding: 10px 16px;
+  border: 1px solid #7C435C;
+  border-radius: 12px;
+  background-color: #7C435C;
+  color: #FFFFFF;
+  font-family: inherit;
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.25;
+  text-decoration: none;
+  box-sizing: border-box;
+  transition: background-color 150ms ease, border-color 150ms ease;
+}
+
+a[href="#movimentacao"]:hover,
+a[href="#cadastro-material"]:hover {
+  background-color: #63344A;
+  border-color: #63344A;
+}
+
+a[href="#movimentacao"]:focus-visible,
+a[href="#cadastro-material"]:focus-visible {
+  outline: 3px solid #7C435C;
+  outline-offset: 2px;
+}
+
+/* Link secundário de retorno (específico da tela de cadastro de materiais F05) */
+[data-tela="cadastro-material"] a[href="#materiais"] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  min-width: 44px;
+  padding: 10px 16px;
+  border: 1px solid #667085;
+  border-radius: 12px;
+  background-color: #FFFFFF;
+  color: #26364D;
+  font-family: inherit;
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.25;
+  text-decoration: none;
+  box-sizing: border-box;
+  transition: background-color 150ms ease, border-color 150ms ease;
+}
+
+[data-tela="cadastro-material"] a[href="#materiais"]:hover {
+  background-color: #F8FAFC;
+  border-color: #26364D;
+}
+
+[data-tela="cadastro-material"] a[href="#materiais"]:focus-visible {
+  outline: 3px solid #7C435C;
+  outline-offset: 2px;
 }
