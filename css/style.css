@@ -36,6 +36,15 @@ button {
   display: none !important;
 }
 
+/* Contêiner para centralização de ações principais (F01, F02, F04, F05) */
+.container-acao {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  text-align: center;
+}
+
 /* Links de acesso aos fluxos F03 e F05 (alvo mínimo de toque 44 × 44 px — WCAG 2.5.5) */
 a[href="#movimentacao"],
 a[href="#cadastro-material"] {
@@ -70,8 +79,8 @@ a[href="#cadastro-material"]:focus-visible {
   outline-offset: 2px;
 }
 
-/* Link secundário de retorno */
-a[href="#materiais"] {
+/* Link secundário de retorno (específico da tela de cadastro de materiais F05) */
+[data-tela="cadastro-material"] a[href="#materiais"] {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -91,12 +100,12 @@ a[href="#materiais"] {
   transition: background-color 150ms ease, border-color 150ms ease;
 }
 
-a[href="#materiais"]:hover {
+[data-tela="cadastro-material"] a[href="#materiais"]:hover {
   background-color: #F8FAFC;
   border-color: #26364D;
 }
 
-a[href="#materiais"]:focus-visible {
+[data-tela="cadastro-material"] a[href="#materiais"]:focus-visible {
   outline: 3px solid #7C435C;
   outline-offset: 2px;
 }
