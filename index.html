@@ -7,14 +7,17 @@
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
-
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="./css/style.css">
     <link rel="stylesheet" href="./css/dashboard.css">
     <link rel="stylesheet" href="./css/movimentacao-form.css">
     <link rel="stylesheet" href="./css/movimentacoes.css">
-    <link rel="stylesheet" href="./css/navegacao.css">
+    <!-- Supabase + Auth (ES Modules - carregam primeiro para inicializar auth antes da navegação) -->
+    <script type="module" src="./js/supabase-client.js"></script>
+    <script type="module" src="./js/auth.js"></script>
+    <!-- App scripts (clássicos com defer) -->
     <script src="./js/app.js" defer></script>
+    <script src="./js/materiais.js" defer></script>
     <script src="./js/movimentacoes-ui.js" defer></script>
     <script src="./js/dashboard-ui.js" defer></script>
     <script src="./js/navegacao.js" defer></script>
@@ -22,13 +25,127 @@
   <body>
       <h1>NailFlow</h1>
 
-      <nav aria-label="Navegação principal">
-        <a href="#dashboard" data-rota="dashboard">Dashboard</a>
-        <a href="#financeiro" data-rota="financeiro">Financeiro</a>
-        <a href="#materiais" data-rota="materiais">Materiais</a>
-      </nav>
+      <!-- Tela de Login (visível quando sem sessão) -->
+      <section
+        data-tela="login"
+        id="tela-login"
+        aria-labelledby="login-titulo"
+        class="tela-login"
+        hidden
+      >
+        <div class="login-container">
+          <header class="login-header">
+            <h2 id="login-titulo">NailFlow</h2>
+            <p class="login-subtitulo">Faça login para acessar seu estúdio</p>
+          </header>
 
-      <main>
+          <form id="form-login" class="login-form" novalidate>
+            <div class="form-group">
+              <label for="email">E-mail</label>
+              <input
+                type="email"
+                id="email"
+                name="email"
+                autocomplete="email"
+                required
+                placeholder="seu@email.com"
+                aria-describedby="email-erro"
+              >
+              <p id="email-erro" class="form-erro" role="alert" hidden></p>
+            </div>
+
+            <div class="form-group">
+              <label for="senha">Senha</label>
+              <div class="senha-wrapper">
+                <input
+                  type="password"
+                  id="senha"
+                  name="senha"
+                  autocomplete="current-password"
+                  required
+                  placeholder="••••••••"
+                  aria-describedby="senha-erro"
+                >
+                <button
+                  type="button"
+                  id="btn-toggle-senha"
+                  class="btn-toggle-senha"
+                  aria-label="Mostrar senha"
+                  aria-pressed="false"
+                >
+                  <svg class="icone-olho" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+                    <path fill="currentColor" d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zm0 1.5c3.03 0 5.5 1.23 7.41 3.15C18.31 11.23 15.84 12.5 12 12.5s-6.31-1.27-8.41-3.15C6.5 5.73 8.97 4.5 12 4.5zm0 7c-2.48 0-4.5-2.02-4.5-4.5S9.52 7 12 7s4.5 2.02 4.5 4.5-2.02 4.5-4.5 4.5z"/>
+                  </svg>
+                  <svg class="icone-olho-riscado" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" hidden>
+                    <path fill="currentColor" d="M12 7c2.76 0 5 2.24 5 5 0 .65-.13 1.26-.36 1.83l2.92 2.92 1.42-1.42 1.82 1.82C17.69 19.81 14.73 22 12 22c-4.39 0-8.27-3.11-9.59-7.5C4.42 9.27 7.36 6 12 6c1.52 0 2.93.48 4.1 1.26l1.52-1.52C12.97 4.87 12.49 4.5 12 4.5zm0-1.5C7 3 2.73 6.11 1 10.5c1.2 2.7 3.3 5 6.24 6.32l1.52-1.52C7.43 13.73 6 11.62 6 9c0-1.67 1.33-3 3-3zm8.49 10.5L1.39 1.39 0 2.78l5.25 5.25C4.6 9.53 3 11.94 3 14.5c0 2.76 2.24 5 5 5 1.38 0 2.64-.56 3.56-1.47l3.59 3.59 1.42-1.42-1.82-1.82C18.43 20.14 20.5 18.4 22 15.5c-1.73-4.39-6-7.5-11-7.5z"/>
+                  </svg>
+                </button>
+              </div>
+              <p id="senha-erro" class="form-erro" role="alert" hidden></p>
+            </div>
+
+            <button
+              type="submit"
+              id="btn-login-email"
+              class="btn btn--primario btn--bloco"
+              aria-busy="false"
+            >
+              <span class="btn-texto">Entrar</span>
+              <svg class="spinner" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" hidden>
+                <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" fill="none" stroke-dasharray="31.4 31.4" stroke-linecap="round"/>
+              </svg>
+            </button>
+
+            <p id="login-erro" class="login-erro" role="alert" hidden></p>
+
+            <a href="#" id="link-esqueci-senha" class="link-esqueci-senha">Esqueceu a senha?</a>
+
+            <div class="divisor">
+              <span>ou</span>
+            </div>
+
+            <button
+              type="button"
+              id="btn-login-google"
+              class="btn btn--google btn--bloco"
+              aria-label="Entrar com Google"
+              aria-busy="false"
+            >
+              <svg class="google-icon" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+              </svg>
+              <span>Entrar com Google</span>
+            </button>
+
+            <p class="suporte-info">
+              Precisa de ajuda? Entre em contato:
+              <a href="mailto:nailflow.suporte@outlook.com">nailflow.suporte@outlook.com</a>
+            </p>
+          </form>
+        </div>
+      </section>
+
+      <!-- Container do App Logado (oculto até autenticar) -->
+      <div id="app-logado" hidden>
+        <nav aria-label="Navegação principal">
+          <a href="#dashboard" data-rota="dashboard">Dashboard</a>
+          <a href="#financeiro" data-rota="financeiro">Financeiro</a>
+          <a href="#materiais" data-rota="materiais">Materiais</a>
+          <button
+            type="button"
+            id="btn-logout"
+            class="nav-logout"
+            aria-label="Sair da conta"
+            hidden
+          >
+            Sair
+          </button>
+        </nav>
+
+        <main>
         <section
           data-tela="dashboard"
           aria-labelledby="dashboard-titulo"
@@ -202,6 +319,7 @@
             <a href="#materiais">Voltar para Materiais</a>
           </div>
         </section>
-      </main>
+        </main>
+      </div> <!-- fim #app-logado -->
   </body>
 </html>

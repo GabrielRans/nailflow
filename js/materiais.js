@@ -1,5 +1,7 @@
 /**
- * Módulo de domínio para cadastro e controle de materiais.
+ * Módulo de domínio para cadastro e controle de materiais - NailFlow
+ * Suporte dual: Supabase (assíncrono) com injeção de dependência
+ * Carregado como script clássico (não ES module) para compatibilidade com testes
  *
  * Contrato do repositório (objeto injetado nas operações):
  * - salvar(material): Promise<void> — persiste o material (já contém id)
@@ -9,9 +11,77 @@
  *     null ou undefined quando o material não é encontrado;
  *     Lança Error em falha de persistência.
  * - buscarPorId(id): Promise<Material | null> — retorna o material ou null se não encontrado
+ * - adicionar(material): Promise<Material> — adiciona novo material
+ * - atualizar(id, dados): Promise<boolean> — atualiza material completamente
+ * - excluir(id): Promise<boolean> — exclui material
  *
  * Material: { id, nome, quantidadeDisponivel, unidade, quantidadeMinima }
  */
+
+// Cache do repositório Supabase
+let repoSupabase = null;
+let inicializacaoPromise = null;
+
+/**
+ * Carrega o módulo do repositório Supabase dinamicamente
+ * @returns {Promise<Function|null>}
+ */
+async function carregarRepoMateriais() {
+  try {
+    const modulo = await import('./repositories/materiais-repo.js');
+    return modulo.tentarCriarMateriaisRepository;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Obtém o repositório ativo (Supabase se autenticado, senão lança erro)
+ * Inicialização preguiçosa (lazy) - só inicializa na primeira chamada da API assíncrona
+ * Não faz fallback silencioso - erros de autenticação/autorização propagam para a UI
+ * @returns {Promise<Object>}
+ */
+async function obterRepositorio() {
+  if (repoSupabase) return repoSupabase;
+
+  // Se já está inicializando, aguarda
+  if (inicializacaoPromise) {
+    return await inicializacaoPromise;
+  }
+
+  // Inicializa Supabase (apenas na primeira chamada)
+  inicializacaoPromise = carregarRepoMateriais()
+    .then(tentarCriar => {
+      if (!tentarCriar) {
+        throw new Error('Módulo do repositório Supabase não disponível');
+      }
+      return tentarCriar();
+    })
+    .then(repo => {
+      if (!repo) {
+        throw new Error('Falha ao criar repositório Supabase: usuário não autenticado/autorizado ou erro de configuração');
+      }
+      repoSupabase = repo;
+      return repo;
+    })
+    .catch(err => {
+      console.error('[Materiais] Falha ao inicializar Supabase:', err.message);
+      inicializacaoPromise = null; // Permite retry
+      throw err;
+    });
+
+  return await inicializacaoPromise;
+}
+
+/**
+ * Força reinicialização do repositório (útil após login/logout)
+ * Não faz fallback silencioso - erros propagam para a UI
+ */
+async function reinicializarMateriaisRepository() {
+  repoSupabase = null;
+  inicializacaoPromise = null;
+  return await obterRepositorio();
+}
 
 function validarMaterial(dados) {
     if (!dados || typeof dados !== "object" || Array.isArray(dados)) {
@@ -87,6 +157,7 @@ function validarMaterial(dados) {
         erro: null
     };
 }
+
 async function adicionarMaterial(dados, repositorio) {
     const validacao = validarMaterial(dados);
 
@@ -98,14 +169,26 @@ async function adicionarMaterial(dados, repositorio) {
         ...validacao.dados
     };
     try {
-        await repositorio.salvar(material);
+        const repo = repositorio || await inicializacaoPromise;
+        if (!repo) {
+            return {
+                sucesso: false,
+                dados: null,
+                erro: {
+                    codigo: "NAO_AUTENTICADO",
+                    mensagem: "Faça login para cadastrar materiais."
+                }
+            };
+        }
+        await repo.salvar(material);
 
         return {
             sucesso: true,
             dados: material,
             erro: null
         };
-    } catch {
+    } catch (err) {
+        console.error('[Materiais] Erro ao adicionar:', err);
         return {
             sucesso: false,
             dados: null,
@@ -119,14 +202,26 @@ async function adicionarMaterial(dados, repositorio) {
 
 async function listarMateriais(repositorio) {
     try {
-        const materiais = await repositorio.listar();
+        const repo = repositorio || await inicializacaoPromise;
+        if (!repo) {
+            return {
+                sucesso: false,
+                dados: [],
+                erro: {
+                    codigo: "NAO_AUTENTICADO",
+                    mensagem: "Faça login para listar materiais."
+                }
+            };
+        }
+        const materiais = await repo.listar();
 
         return {
             sucesso: true,
             dados: materiais,
             erro: null
         };
-    } catch {
+    } catch (err) {
+        console.error('[Materiais] Erro ao listar:', err);
         return {
             sucesso: false,
             dados: null,
@@ -169,7 +264,19 @@ async function atualizarQuantidadeMaterial(id, quantidade, repositorio) {
     }
 
     try {
-        const materialAtualizado = await repositorio.atualizarQuantidade(
+        const repo = repositorio || await inicializacaoPromise;
+        if (!repo) {
+            return {
+                sucesso: false,
+                dados: null,
+                erro: {
+                    codigo: "NAO_AUTENTICADO",
+                    mensagem: "Faça login para atualizar materiais."
+                }
+            };
+        }
+
+        const materialAtualizado = await repo.atualizarQuantidade(
             idNormalizado,
             quantidade
         );
@@ -191,7 +298,8 @@ async function atualizarQuantidadeMaterial(id, quantidade, repositorio) {
             erro: null
         };
 
-    } catch {
+    } catch (err) {
+        console.error('[Materiais] Erro ao atualizar quantidade:', err);
         return {
             sucesso: false,
             dados: null,
@@ -218,7 +326,19 @@ async function buscarMaterialPorId(id, repositorio) {
     const idNormalizado = id.trim();
 
     try {
-        const material = await repositorio.buscarPorId(idNormalizado);
+        const repo = repositorio || await inicializacaoPromise;
+        if (!repo) {
+            return {
+                sucesso: false,
+                dados: null,
+                erro: {
+                    codigo: "NAO_AUTENTICADO",
+                    mensagem: "Faça login para buscar materiais."
+                }
+            };
+        }
+
+        const material = await repo.buscarPorId(idNormalizado);
 
         if (material == null) {
             return {
@@ -236,7 +356,8 @@ async function buscarMaterialPorId(id, repositorio) {
             dados: material,
             erro: null
         };
-    } catch {
+    } catch (err) {
+        console.error('[Materiais] Erro ao buscar:', err);
         return {
             sucesso: false,
             dados: null,
@@ -248,13 +369,68 @@ async function buscarMaterialPorId(id, repositorio) {
     }
 }
 
+// Novas funções assíncronas expostas para UI moderna
+async function adicionarMaterialAsync(dados) {
+    return await adicionarMaterial(dados, null);
+}
+
+async function listarMateriaisAsync() {
+    return await listarMateriais(null);
+}
+
+async function atualizarQuantidadeMaterialAsync(id, quantidade) {
+    return await atualizarQuantidadeMaterial(id, quantidade, null);
+}
+
+async function buscarMaterialPorIdAsync(id) {
+    return await buscarMaterialPorId(id, null);
+}
+
+async function atualizarMaterialAsync(id, dados) {
+    try {
+        const repo = await inicializacaoPromise;
+        if (!repo) {
+            return { sucesso: false, erro: { codigo: "NAO_AUTENTICADO", mensagem: "Faça login para atualizar materiais." } };
+        }
+        const validacao = validarMaterial(dados);
+        if (!validacao.sucesso) return validacao;
+        const ok = await repo.atualizar(id, validacao.dados);
+        return { sucesso: ok, erro: ok ? null : { codigo: "MATERIAL_NAO_ENCONTRADO", mensagem: "Material não encontrado." } };
+    } catch (err) {
+        console.error('[Materiais] Erro ao atualizar:', err);
+        return { sucesso: false, erro: { codigo: "ERRO_ATUALIZACAO", mensagem: "Não foi possível atualizar o material." } };
+    }
+}
+
+async function excluirMaterialAsync(id) {
+    try {
+        const repo = await inicializacaoPromise;
+        if (!repo) {
+            return { sucesso: false, erro: { codigo: "NAO_AUTENTICADO", mensagem: "Faça login para excluir materiais." } };
+        }
+        const ok = await repo.excluir(id);
+        return { sucesso: ok, erro: ok ? null : { codigo: "MATERIAL_NAO_ENCONTRADO", mensagem: "Material não encontrado." } };
+    } catch (err) {
+        console.error('[Materiais] Erro ao excluir:', err);
+        return { sucesso: false, erro: { codigo: "ERRO_EXCLUSAO", mensagem: "Não foi possível excluir o material." } };
+    }
+}
+
 // Exposição para uso no navegador (scripts clássicos) e Node (testes)
 const apiMateriais = {
     validarMaterial,
     adicionarMaterial,
     listarMateriais,
     atualizarQuantidadeMaterial,
-    buscarMaterialPorId
+    buscarMaterialPorId,
+    // API Assíncrona (moderna)
+    adicionarMaterialAsync,
+    listarMateriaisAsync,
+    atualizarQuantidadeMaterialAsync,
+    buscarMaterialPorIdAsync,
+    atualizarMaterialAsync,
+    excluirMaterialAsync,
+    reinicializarMateriaisRepository
 };
 
 if (typeof globalThis !== "undefined") {
