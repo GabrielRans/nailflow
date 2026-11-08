@@ -429,6 +429,7 @@ nav a[data-rota][aria-current="page"] {
   border-radius: var(--radius);
   box-shadow: var(--shadow-md);
   text-align: center;
+  position: relative;
 }
 
 .login-header {
@@ -748,6 +749,16 @@ nav a[data-rota][aria-current="page"] {
   nav a[data-rota] {
     padding: 6px 10px;
     font-size: 0.875rem;
+  }
+
+  .btn-tema {
+    width: 40px;
+    height: 40px;
+  }
+
+  .btn-tema svg {
+    width: 20px;
+    height: 20px;
   }
 
   .nav-logout {
