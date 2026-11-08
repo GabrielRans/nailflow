@@ -29,6 +29,8 @@ const estadoAuth = {
   inicializado: false,
   autenticado: false,    // AuthN: tem sessão válida + usuário
   autorizado: false,     // AuthZ: tem estudioId válido (vínculo com estúdio)
+  // Fluxo de redefinição de senha
+  emRedefinicaoSenha: false,
 };
 
 // Fallback síncrono para scripts clássicos (não ES modules)
@@ -41,6 +43,7 @@ window.NailFlow.auth = {
   autenticado: false,    // AuthN
   autorizado: false,     // AuthZ
   inicializado: false,
+  emRedefinicaoSenha: false,
 };
 
 // =============================================================================
@@ -82,7 +85,7 @@ async function buscarEstudioIdDoUsuario(userId) {
 // Atualizar estado interno e window.NailFlow.auth (síncrono)
 // =============================================================================
 
-function atualizarEstadoAuth(sessao, usuario, estudioId) {
+function atualizarEstadoAuth(sessao, usuario, estudioId, emRedefinicaoSenha = false) {
   const autenticado = !!sessao && !!usuario;
   const autorizado = autenticado && !!estudioId;
 
@@ -92,6 +95,7 @@ function atualizarEstadoAuth(sessao, usuario, estudioId) {
   estadoAuth.inicializado = true;
   estadoAuth.autenticado = autenticado;
   estadoAuth.autorizado = autorizado;
+  estadoAuth.emRedefinicaoSenha = emRedefinicaoSenha;
 
   window.NailFlow.auth.sessao = sessao;
   window.NailFlow.auth.usuario = usuario;
@@ -99,6 +103,7 @@ function atualizarEstadoAuth(sessao, usuario, estudioId) {
   window.NailFlow.auth.autenticado = autenticado;
   window.NailFlow.auth.autorizado = autorizado;
   window.NailFlow.auth.inicializado = true;
+  window.NailFlow.auth.emRedefinicaoSenha = emRedefinicaoSenha;
 }
 
 function limparEstadoAuth() {
@@ -108,6 +113,7 @@ function limparEstadoAuth() {
   estadoAuth.inicializado = true;
   estadoAuth.autenticado = false;
   estadoAuth.autorizado = false;
+  estadoAuth.emRedefinicaoSenha = false;
 
   window.NailFlow.auth.sessao = null;
   window.NailFlow.auth.usuario = null;
@@ -115,16 +121,19 @@ function limparEstadoAuth() {
   window.NailFlow.auth.autenticado = false;
   window.NailFlow.auth.autorizado = false;
   window.NailFlow.auth.inicializado = true;
+  window.NailFlow.auth.emRedefinicaoSenha = false;
 }
 
-function marcarInicializado(autenticado = false, autorizado = false) {
+function marcarInicializado(autenticado = false, autorizado = false, emRedefinicaoSenha = false) {
   estadoAuth.inicializado = true;
   estadoAuth.autenticado = autenticado;
   estadoAuth.autorizado = autorizado;
+  estadoAuth.emRedefinicaoSenha = emRedefinicaoSenha;
 
   window.NailFlow.auth.inicializado = true;
   window.NailFlow.auth.autenticado = autenticado;
   window.NailFlow.auth.autorizado = autorizado;
+  window.NailFlow.auth.emRedefinicaoSenha = emRedefinicaoSenha;
 }
 
 // =============================================================================
@@ -213,6 +222,52 @@ export async function logout() {
     console.error('[Auth] Erro ao fazer logout:', err);
     dispararEvento('auth:erro', {
       mensagem: 'Erro ao sair. Tente novamente.',
+      erro: err
+    });
+    throw err;
+  }
+}
+
+/**
+ * Atualiza a senha do usuário (usado no fluxo de recuperação de senha)
+ * @param {string} novaSenha - Nova senha do usuário
+ */
+export async function atualizarSenha(novaSenha) {
+  try {
+    const { error } = await supabase.auth.updateUser({
+      password: novaSenha
+    });
+    if (error) throw error;
+
+    // Limpa o estado de redefinição de senha após sucesso
+    estadoAuth.emRedefinicaoSenha = false;
+    window.NailFlow.auth.emRedefinicaoSenha = false;
+
+    // Remove o token da URL por segurança
+    if (window.location.hash.includes('type=recovery') || window.location.hash.includes('access_token')) {
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+
+    dispararEvento('auth:password-updated', { sucesso: true });
+    return { sucesso: true };
+  } catch (err) {
+    console.error('[Auth] Erro ao atualizar senha:', err);
+
+    let mensagem = 'Erro ao salvar nova senha. Tente novamente.';
+
+    if (err.message) {
+      const msg = err.message.toLowerCase();
+      if (msg.includes('weak password') || msg.includes('senha fraca')) {
+        mensagem = 'A senha é muito fraca. Use pelo menos 6 caracteres.';
+      } else if (msg.includes('same password') || msg.includes('mesma senha')) {
+        mensagem = 'A nova senha deve ser diferente da anterior.';
+      } else if (msg.includes('session expired') || msg.includes('token expired') || msg.includes('expirado')) {
+        mensagem = 'O link de recuperação expirou. Solicite um novo e-mail.';
+      }
+    }
+
+    dispararEvento('auth:erro', {
+      mensagem,
       erro: err
     });
     throw err;
@@ -314,6 +369,22 @@ export async function inicializarAuth() {
         // Perfil atualizado - mantém estado atual
         if (sessao?.user) {
           atualizarEstadoAuth(sessao, sessao.user, estadoAuth.estudioId);
+        }
+        break;
+
+      case 'PASSWORD_RECOVERY':
+        // Usuário clicou no link de recuperação de senha no e-mail
+        // A sessão contém um token de recuperação - mostrar tela de redefinição
+        console.log('[Auth] PASSWORD_RECOVERY detectado - exibindo tela de redefinição de senha');
+        if (sessao?.user) {
+          atualizarEstadoAuth(sessao, sessao.user, null, true);
+          dispararEvento('auth:password-recovery', { sessao, usuario: sessao.user });
+        } else {
+          // Se não há sessão mas há evento, pode ser que o token esteja na URL
+          // Marca como em redefinição para a UI mostrar a tela
+          estadoAuth.emRedefinicaoSenha = true;
+          window.NailFlow.auth.emRedefinicaoSenha = true;
+          dispararEvento('auth:password-recovery', { sessao: null, usuario: null });
         }
         break;
 

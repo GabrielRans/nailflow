@@ -90,17 +90,31 @@ async function carregarIndicadores() {
   }
 }
 
-// Renderiza os indicadores após o carregamento das movimentações
-document.addEventListener("DOMContentLoaded", async () => {
-  // Aguarda o financeiro inicializar
-  if (window.NailFlow?.financeiro) {
+// Renderiza os indicadores quando o usuário estiver autenticado E autorizado
+function inicializarDashboard() {
+  // Se já autenticado e autorizado, carrega imediatamente
+  if (window.NailFlow?.auth?.autorizado === true) {
+    carregarIndicadores();
+    return;
+  }
+
+  // Caso contrário, aguarda o evento auth:login (AuthN + AuthZ OK)
+  window.addEventListener('auth:login', async () => {
     await carregarIndicadores();
-  } else {
-    window.addEventListener('auth:login', async () => {
-      await carregarIndicadores();
-    }, { once: true });
+  }, { once: true });
+}
+
+// Limpa o dashboard no logout
+window.addEventListener('auth:logout', () => {
+  cardsIndicadores.forEach(el => el.textContent = formatarIndicadores.format(0));
+  if (estadoDashboard) {
+    estadoDashboard.textContent = "";
+    estadoDashboard.hidden = true;
   }
 });
+
+// Inicializa no DOMContentLoaded
+document.addEventListener("DOMContentLoaded", inicializarDashboard);
 
 // Atualiza os indicadores quando uma movimentação é cadastrada, editada ou excluída
 document.addEventListener("movimentacoes:atualizadas", async (event) => {
