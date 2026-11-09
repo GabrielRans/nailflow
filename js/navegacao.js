@@ -182,8 +182,17 @@ function limparFormularioMovimentacao() {
     form.reset();
     const idInput = document.getElementById("movimentacao-id");
     if (idInput) idInput.value = "";
+
+    // Resetar botões de tipo (Entrada/Saída)
+    document.querySelectorAll(".btn-tipo").forEach((botao) => {
+      botao.classList.remove("ativo");
+      botao.setAttribute("aria-checked", "false");
+    });
+    const tipoSelect = document.getElementById("tipo");
+    if (tipoSelect) tipoSelect.value = "";
+
     // Focar no primeiro campo
-    const primeiroCampo = form.querySelector("select, input");
+    const primeiroCampo = form.querySelector("input, select");
     primeiroCampo?.focus();
   }
 }

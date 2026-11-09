@@ -498,6 +498,211 @@ nav a[data-rota][aria-current="page"] {
 }
 
 /* =============================================================================
+   FINANCEIRO / MOVIMENTAÇÕES (F02)
+   ============================================================================= */
+
+/* Grid dos Filtros (Lado a lado) */
+.filtros-container {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 32px;
+  padding: 20px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+/* Botão Filtrar e Limpar ocupam a linha toda */
+.filtros-container .btn-filtrar {
+  grid-column: span 2;
+  margin-top: 8px;
+  background-color: var(--primary);
+  color: #fff;
+}
+
+.filtros-container .btn-filtrar:hover {
+  background-color: var(--primary-hover);
+}
+
+.filtros-container .btn-limpar {
+  grid-column: span 2;
+  margin-top: 8px;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+}
+
+.filtros-container .btn-limpar:hover {
+  background: color-mix(in srgb, var(--text-primary) 5%, transparent);
+  border-color: var(--text-secondary);
+}
+
+.filtros-container .form-group {
+  margin: 0;
+}
+
+/* Cabeçalho da lista de lançamentos */
+.lista-header-lancamentos {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.lista-header-lancamentos h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  color: var(--text-primary);
+}
+
+.lista-header-lancamentos .link-nova-movimentacao {
+  color: var(--primary);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.lista-header-lancamentos .link-nova-movimentacao:hover {
+  color: var(--primary-hover);
+  text-decoration: underline;
+}
+
+/* Card de cada lançamento */
+.item-movimentacao {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-bottom: 12px;
+}
+
+/* Ícone circular da movimentação */
+.icone-movimentacao {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  flex-shrink: 0;
+}
+
+.icone-movimentacao.receita {
+  color: #059669;
+}
+
+.icone-movimentacao.despesa {
+  color: #DC2626;
+}
+
+.item-movimentacao .info-principal {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+}
+
+.item-movimentacao .descricao {
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.item-movimentacao .detalhes {
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+}
+
+.item-movimentacao .valor {
+  font-weight: 700;
+  font-size: 1rem;
+  white-space: nowrap;
+}
+
+.item-movimentacao .valor.receita {
+  color: #059669;
+}
+
+.item-movimentacao .valor.despesa {
+  color: #DC2626;
+}
+
+.item-movimentacao .acoes {
+  display: flex;
+  gap: 8px;
+}
+
+.item-movimentacao .btn-acao {
+  padding: 6px 12px;
+  font-size: 0.8125rem;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background-color var(--transition), border-color var(--transition), color var(--transition);
+}
+
+.item-movimentacao .btn-acao.editar {
+  border: 1px solid #007BFF;
+  background: transparent;
+  color: #007BFF;
+}
+
+.item-movimentacao .btn-acao.editar:hover {
+  background: color-mix(in srgb, #007BFF 10%, transparent);
+  color: #007BFF;
+}
+
+.item-movimentacao .btn-acao.excluir {
+  border: 1px solid var(--error-text);
+  background: transparent;
+  color: var(--error-text);
+}
+
+.item-movimentacao .btn-acao.excluir:hover {
+  background: color-mix(in srgb, var(--error-text) 10%, transparent);
+  color: var(--error-text);
+}
+
+.item-movimentacao .btn-acao:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+
+/* Empty state para lista de lançamentos */
+.lista-lancamentos:empty::before {
+  content: "Nenhum lançamento encontrado";
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  padding: 16px;
+  text-align: center;
+  display: block;
+}
+
+/* Loading state */
+.movimentacoes-carregando {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  color: var(--text-secondary);
+  gap: 12px;
+}
+
+.movimentacoes-carregando .spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid var(--border);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+/* =============================================================================
    TELA DE LOGIN
    ============================================================================= */
 .tela-login {
@@ -823,6 +1028,139 @@ nav a[data-rota][aria-current="page"] {
   border-top-color: var(--primary);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
+}
+
+/* =============================================================================
+   F03 - NOVA MOVIMENTAÇÃO
+   ============================================================================= */
+.form-movimentacao {
+  display: grid;
+  gap: 20px;
+  max-width: 600px;
+}
+
+.form-movimentacao > div {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.form-movimentacao label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.form-movimentacao input[type="text"],
+.form-movimentacao input[type="number"],
+.form-movimentacao input[type="date"],
+.form-movimentacao select,
+.form-movimentacao textarea {
+  padding: 12px 16px;
+  font-size: 1rem;
+  font-family: inherit;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  color: var(--text-primary);
+  transition: border-color var(--transition), box-shadow var(--transition);
+}
+
+.form-movimentacao input:focus,
+.form-movimentacao select:focus,
+.form-movimentacao textarea:focus {
+  outline: none;
+  border-color: var(--focus);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--focus) 20%, transparent);
+}
+
+.form-movimentacao input::placeholder,
+.form-movimentacao textarea::placeholder {
+  color: var(--text-secondary);
+}
+
+/* Botões de alternância de tipo (Entrada/Saída) */
+.tipo-botoes {
+  display: flex;
+  gap: 12px;
+}
+
+.btn-tipo {
+  flex: 1;
+  padding: 14px 20px;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  font-family: inherit;
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--card);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: border-color var(--transition), background-color var(--transition), color var(--transition), box-shadow var(--transition);
+}
+
+.btn-tipo:hover {
+  border-color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 5%, transparent);
+}
+
+.btn-tipo:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.btn-tipo.ativo {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: var(--primary-contrast);
+  box-shadow: var(--shadow-sm);
+}
+
+.btn-tipo[data-tipo="entrada"].ativo {
+  border-color: #059669;
+  background: #059669;
+  color: #fff;
+}
+
+.btn-tipo[data-tipo="saida"].ativo {
+  border-color: #DC2626;
+  background: #DC2626;
+  color: #fff;
+}
+
+/* Ações do formulário */
+.acoes-form {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  padding-top: 8px;
+  margin-top: 4px;
+}
+
+.acoes-form .btn {
+  min-width: 140px;
+}
+
+/* Botão secundário */
+.btn--secundario {
+  background: var(--card);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+}
+
+.btn--secundario:hover {
+  background: color-mix(in srgb, var(--text-primary) 5%, transparent);
+  border-color: var(--text-secondary);
+}
+
+.btn--secundario:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+
+/* Campos específicos do formulário */
+.campo-tipo .form-erro {
+  margin-top: 4px;
 }
 
 /* =============================================================================

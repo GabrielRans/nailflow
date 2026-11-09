@@ -217,22 +217,49 @@
           data-tela="movimentacao"
           aria-labelledby="movimentacao-titulo"
         >
-          <h2 id="movimentacao-titulo" tabindex="-1">
-            Nova movimentação
-          </h2>
+          <header class="page-header">
+            <h2 id="movimentacao-titulo" tabindex="-1">Nova movimentação</h2>
+            <p>Registre uma entrada ou saída</p>
+          </header>
 
-          <form id="form-movimentacao">
+          <form id="form-movimentacao" class="form-movimentacao" novalidate>
             <input type="hidden" id="movimentacao-id" name="id">
-            <div>
+
+            <!-- Tipo com botões de alternância + select oculto para compatibilidade JS -->
+            <div class="campo-tipo">
               <label for="tipo">Tipo</label>
-              <select id="tipo" name="tipo" required>
+              <div class="tipo-botoes" role="radiogroup" aria-label="Tipo de movimentação">
+                <button
+                  type="button"
+                  class="btn-tipo"
+                  data-tipo="entrada"
+                  role="radio"
+                  aria-checked="false"
+                  aria-label="Entrada (receita)"
+                >
+                  Entrada
+                </button>
+                <button
+                  type="button"
+                  class="btn-tipo"
+                  data-tipo="saida"
+                  role="radio"
+                  aria-checked="false"
+                  aria-label="Saída (despesa)"
+                >
+                  Saída
+                </button>
+              </div>
+              <!-- Select oculto para compatibilidade com JS existente -->
+              <select id="tipo" name="tipo" required hidden>
                 <option value="">Selecione</option>
                 <option value="entrada">Entrada</option>
                 <option value="saida">Saída</option>
               </select>
+              <p class="form-erro" id="tipo-erro" role="alert" hidden></p>
             </div>
 
-            <div>
+            <div class="campo-valor">
               <label for="valor">Valor</label>
               <input
                 type="number"
@@ -241,10 +268,11 @@
                 min="0.01"
                 step="0.01"
                 required
+                placeholder="0,00"
               >
             </div>
 
-            <div>
+            <div class="campo-descricao">
               <label for="descricao">Descrição</label>
               <input
                 type="text"
@@ -252,11 +280,11 @@
                 name="descricao"
                 maxlength="100"
                 required
+                placeholder="Ex: Atendimento unhas gel"
               >
-
             </div>
 
-            <div>
+            <div class="campo-categoria">
               <label for="categoria">Categoria</label>
               <select id="categoria" name="categoria" required>
                 <option value="">Selecione</option>
@@ -266,7 +294,7 @@
               </select>
             </div>
 
-            <div>
+            <div class="campo-data">
               <label for="data">Data</label>
               <input
                 type="date"
@@ -276,17 +304,21 @@
               >
             </div>
 
-            <div>
+            <div class="campo-observacao">
               <label for="observacao">Observação</label>
               <textarea
                 id="observacao"
                 name="observacao"
-                rows="4"
+                rows="3"
                 maxlength="300"
+                placeholder="Detalhes opcionais..."
               ></textarea>
             </div>
 
-            <button type="submit">Salvar movimentação</button>
+            <div class="acoes-form">
+              <button type="submit" class="btn btn--primario">Salvar</button>
+              <button type="button" class="btn btn--secundario" id="btn-cancelar-movimentacao">Cancelar</button>
+            </div>
           </form>
         </section>
 
@@ -294,33 +326,37 @@
           data-tela="financeiro"
           aria-labelledby="financeiro-titulo"
         >
-          <h2 id="financeiro-titulo" tabindex="-1">
-            Movimentações salvas
-          </h2>
+          <header class="page-header">
+            <h2 id="financeiro-titulo" tabindex="-1">Movimentações</h2>
+            <p>Consulte e filtre entradas e saídas</p>
+          </header>
 
-          <div class="container-acao">
-            <a href="#movimentacao">Nova movimentação</a>
-          </div>
-
-          <div class="filtros-movimentacoes">
-            <label for="filtro-data-inicial">Data Inicial</label>
-            <input type="date" id="filtro-data-inicial">
-
-            <label for="filtro-data-final">Data Final</label>
-            <input type="date" id="filtro-data-final">
-
-            <button type="button" id="btn-filtrar-periodo">
-              Filtrar
-            </button>
-
-            <button type="button" id="btn-limpar-filtro">
-              Limpar filtro
-            </button>
-          </div>
+          <!-- Filtros -->
+          <form id="form-filtro" class="filtros-container">
+            <div class="form-group">
+              <label for="filtro-data-inicial">Período inicial</label>
+              <input type="date" id="filtro-data-inicial" name="data-inicial">
+            </div>
+            <div class="form-group">
+              <label for="filtro-data-final">Período final</label>
+              <input type="date" id="filtro-data-final" name="data-final">
+            </div>
+            <button type="button" id="btn-filtrar-periodo" class="btn btn--primario btn-filtrar">Filtrar</button>
+            <button type="button" id="btn-limpar-filtro" class="btn btn--secundario btn-limpar">Limpar filtro</button>
+          </form>
 
           <p id="financeiro-erro" role="alert"></p>
 
-          <ul id="lista-movimentacoes"></ul>
+          <!-- Cabeçalho da Lista -->
+          <div class="lista-header-lancamentos">
+            <h3>Lançamentos</h3>
+            <a href="#nova-movimentacao" class="link-nova-movimentacao">+ Nova movimentação</a>
+          </div>
+
+          <!-- Lista (O JS vai popular os itens aqui) -->
+          <div id="lista-movimentacoes" class="lista-lancamentos">
+            <!-- Itens gerados pelo JS -->
+          </div>
         </section>
 
         <section data-tela="materiais" aria-labelledby="materiais-titulo">

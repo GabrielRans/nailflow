@@ -17,9 +17,70 @@ const formularioMovimentacao = document.querySelector("#form-movimentacao");
 const campoIdMovimentacao = document.querySelector("#movimentacao-id");
 const mensagemErroFinanceiro = document.querySelector("#financeiro-erro");
 const listaMovimentacoes = document.querySelector("#lista-movimentacoes");
+const campoTipoSelect = document.querySelector("#tipo");
+const botoesTipo = document.querySelectorAll(".btn-tipo");
+const btnCancelarMovimentacao = document.querySelector("#btn-cancelar-movimentacao");
 
 // Estado de loading
 let carregando = false;
+
+/**
+ * Sincroniza os botões de alternância de tipo com o select oculto
+ * @param {string} tipo - "entrada" ou "saida"
+ */
+function sincronizarBotoesTipo(tipo) {
+  // Atualiza o select oculto (compatibilidade JS)
+  if (campoTipoSelect) {
+    campoTipoSelect.value = tipo;
+  }
+
+  // Atualiza estado visual dos botões
+  botoesTipo.forEach((botao) => {
+    const ehAtivo = botao.dataset.tipo === tipo;
+    botao.classList.toggle("ativo", ehAtivo);
+    botao.setAttribute("aria-checked", ehAtivo.toString());
+  });
+}
+
+/**
+ * Inicializa os listeners dos botões de tipo (Entrada/Saída)
+ */
+function inicializarBotoesTipo() {
+  botoesTipo.forEach((botao) => {
+    botao.addEventListener("click", () => {
+      const tipo = botao.dataset.tipo;
+      sincronizarBotoesTipo(tipo);
+    });
+  });
+
+  // Handler do botão Cancelar
+  if (btnCancelarMovimentacao) {
+    btnCancelarMovimentacao.addEventListener("click", () => {
+      limparFormularioMovimentacaoCompleto();
+      // Volta para a tela financeiro
+      window.location.hash = "#financeiro";
+    });
+  }
+}
+
+/**
+ * Limpa o formulário completamente incluindo botões de tipo
+ */
+function limparFormularioMovimentacaoCompleto() {
+  if (formularioMovimentacao) {
+    formularioMovimentacao.reset();
+    if (campoIdMovimentacao) campoIdMovimentacao.value = "";
+    // Resetar botões de tipo (nenhum selecionado)
+    botoesTipo.forEach((botao) => {
+      botao.classList.remove("ativo");
+      botao.setAttribute("aria-checked", "false");
+    });
+    if (campoTipoSelect) campoTipoSelect.value = "";
+    // Focar no primeiro campo
+    const primeiroCampo = formularioMovimentacao.querySelector("input, select");
+    primeiroCampo?.focus();
+  }
+}
 
 /**
  * Mostra/esconde estado de carregamento na lista
@@ -29,10 +90,10 @@ function setCarregando(mostrar) {
   carregando = mostrar;
   if (mostrar) {
     listaMovimentacoes.innerHTML = `
-      <li class="movimentacoes-carregando" role="status" aria-live="polite">
+      <div class="movimentacoes-carregando" role="status" aria-live="polite">
         <div class="spinner" aria-hidden="true"></div>
         <span>Carregando movimentações...</span>
-      </li>
+      </div>
     `;
   }
 }
@@ -45,7 +106,7 @@ function renderizarMovimentacoes(movimentacoes) {
   listaMovimentacoes.replaceChildren();
 
   if (movimentacoes.length === 0) {
-    const itemVazio = document.createElement("li");
+    const itemVazio = document.createElement("div");
     itemVazio.className = "movimentacoes-vazio";
     itemVazio.setAttribute("role", "status");
 
@@ -63,60 +124,41 @@ function renderizarMovimentacoes(movimentacoes) {
   movimentacoes.forEach((movimentacao) => {
     const item = document.createElement("li");
     const ehReceita = movimentacao.tipo === "entrada";
-    item.className = `movimentacao movimentacao--${ehReceita ? "receita" : "despesa"}`;
+    // Adiciona a classe item-movimentacao conforme wireframe F02
+    item.className = `item-movimentacao ${ehReceita ? "receita" : "despesa"}`;
 
-    const tipo = document.createElement("span");
-    tipo.className = "movimentacao__tipo";
-    tipo.textContent = ehReceita ? "Receita" : "Despesa";
+    // Ícone circular da movimentação (seta para cima/baixo)
+    const icone = document.createElement("div");
+    icone.className = `icone-movimentacao ${ehReceita ? "receita" : "despesa"}`;
+    icone.setAttribute("aria-hidden", "true");
+    icone.textContent = ehReceita ? "↑" : "↓";
 
-    const indicador = document.createElement("span");
-    indicador.className = "movimentacao__indicador";
-    indicador.setAttribute("aria-hidden", "true");
-    indicador.textContent = ehReceita ? "↑" : "↓";
+    // Container principal com as informações
+    const infoPrincipal = document.createElement("div");
+    infoPrincipal.className = "info-principal";
 
-    const conteudo = document.createElement("div");
-    conteudo.className = "movimentacao__conteudo";
-
-    const descricao = document.createElement("p");
-    descricao.className = "movimentacao__descricao";
+    const descricao = document.createElement("span");
+    descricao.className = "descricao";
     descricao.textContent = movimentacao.descricao;
 
-    const detalhes = document.createElement("p");
-    detalhes.className = "movimentacao__detalhes";
-    detalhes.setAttribute(
-      "aria-label",
-      `${movimentacao.categoria} • ${movimentacao.data}`
-    );
+    const detalhes = document.createElement("span");
+    detalhes.className = "detalhes";
+    detalhes.textContent = `${movimentacao.categoria} • ${movimentacao.data}`;
 
-    const categoria = document.createElement("span");
-    categoria.className = "movimentacao__categoria";
-    categoria.textContent = movimentacao.categoria;
+    infoPrincipal.append(descricao, detalhes);
 
-    const separador = document.createElement("span");
-    separador.setAttribute("aria-hidden", "true");
-    separador.textContent = "•";
-
-    const data = document.createElement("span");
-    data.className = "movimentacao__data";
-    data.textContent = movimentacao.data;
-
-    detalhes.append(categoria, separador, data);
-    conteudo.append(descricao, detalhes);
-
+    // Valor
     const valor = document.createElement("strong");
-    valor.className = "movimentacao__valor";
+    valor.className = `valor ${ehReceita ? "receita" : "despesa"}`;
     valor.textContent = formatadorMoeda.format(movimentacao.valor);
 
-    const lateral = document.createElement("div");
-    lateral.className = "movimentacao__lateral";
-    lateral.append(valor);
-
+    // Ações
     const acoes = document.createElement("div");
-    acoes.className = "movimentacao__acoes";
+    acoes.className = "acoes";
 
     const botaoEditar = document.createElement("button");
     botaoEditar.type = "button";
-    botaoEditar.className = "movimentacao__acao";
+    botaoEditar.className = "btn-acao editar";
     botaoEditar.textContent = "Editar";
     botaoEditar.setAttribute(
       "aria-label",
@@ -156,6 +198,9 @@ function renderizarMovimentacoes(movimentacoes) {
         formularioMovimentacao.elements.observacao.value =
           movimentacaoSelecionada.observacao ?? "";
 
+        // Sincroniza botões de tipo (Entrada/Saída) com o valor do select
+        sincronizarBotoesTipo(movimentacaoSelecionada.tipo);
+
         navegarParaEdicao(botaoEditar);
       } catch (err) {
         console.error('[UI] Erro ao buscar movimentação para edição:', err);
@@ -169,7 +214,7 @@ function renderizarMovimentacoes(movimentacoes) {
 
     const botaoExcluir = document.createElement("button");
     botaoExcluir.type = "button";
-    botaoExcluir.className = "movimentacao__acao";
+    botaoExcluir.className = "btn-acao excluir";
     botaoExcluir.textContent = "Excluir";
     botaoExcluir.setAttribute(
       "aria-label",
@@ -203,8 +248,7 @@ function renderizarMovimentacoes(movimentacoes) {
     });
 
     acoes.append(botaoEditar, botaoExcluir);
-    lateral.append(acoes);
-    item.append(tipo, indicador, conteudo, lateral);
+    item.append(icone, infoPrincipal, valor, acoes);
 
     listaMovimentacoes.append(item);
   });
@@ -297,4 +341,7 @@ window.addEventListener('auth:logout', () => {
 })
 
 // Inicializa no DOMContentLoaded
-document.addEventListener("DOMContentLoaded", inicializarMovimentacoes);
+document.addEventListener("DOMContentLoaded", () => {
+  inicializarMovimentacoes();
+  inicializarBotoesTipo();
+});
