@@ -125,9 +125,7 @@ button {
 .container-acao {
   display: flex;
   justify-content: center;
-  align-items: center;
   width: 100%;
-  text-align: center;
 }
 
 /* Links de acesso aos fluxos F03 e F05 (alvo mínimo de toque 44 × 44 px — WCAG 2.5.5) */
@@ -277,13 +275,13 @@ a[href="#cadastro-material"]:focus-visible {
 }
 
 /* =============================================================================
-   NAVEGAÇÃO COM BOTÃO LOGOUT
+   NAVEGAÇÃO COM BOTÃO LOGOUT (PR #40)
    ============================================================================= */
 nav[aria-label="Navegação principal"] {
   display: flex;
-  flex-wrap: wrap;
+  justify-content: center;
   align-items: center;
-  gap: 12px;
+  gap: 16px;
   padding: 16px 20px;
   max-width: 720px;
   margin: 0 auto;
@@ -334,6 +332,169 @@ nav a[data-rota][aria-current="page"] {
 .nav-logout:focus-visible {
   outline: 3px solid var(--focus);
   outline-offset: 2px;
+}
+
+/* =============================================================================
+   DASHBOARD (F01)
+   ============================================================================= */
+.page-header {
+  margin-bottom: 24px;
+}
+
+.page-header h2 {
+  margin: 0 0 4px;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.page-header p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+}
+
+/* Grid de Indicadores */
+.indicadores-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.card-indicador {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.card-indicador .icone {
+  font-size: 1.5rem;
+  line-height: 1;
+  color: var(--primary);
+  flex-shrink: 0;
+}
+
+.card-indicador .info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.card-indicador .label {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.card-indicador .valor {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+
+/* Container que centraliza o botão (PR #40) */
+.container-acao {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  margin-bottom: 24px;
+}
+
+/* Card de Alerta de Materiais */
+.card-alerta {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  margin-bottom: 24px;
+}
+
+.icone-alerta {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--error-bg);
+  color: var(--error-text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.texto-alerta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.texto-alerta strong {
+  font-size: 0.875rem;
+  color: var(--text-primary);
+}
+
+.texto-alerta span {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+/* Últimas movimentações */
+.lista-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.lista-header h3 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.link-ver-todas {
+  font-size: 0.875rem;
+  color: var(--primary);
+  font-weight: 500;
+  text-decoration: none;
+  transition: color var(--transition);
+}
+
+.link-ver-todas:hover {
+  color: var(--primary-hover);
+  text-decoration: underline;
+}
+
+.lista-movimentacoes {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.lista-movimentacoes:empty::before {
+  content: "Nenhuma movimentação recente";
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  padding: 16px;
+  text-align: center;
 }
 
 /* =============================================================================
