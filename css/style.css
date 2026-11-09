@@ -1167,19 +1167,48 @@ nav a[data-rota][aria-current="page"] {
    RESPONSIVIDADE
    ============================================================================= */
 @media (max-width: 480px) {
+  /* Navegação: reduz padding e fonte */
   nav[aria-label="Navegação principal"] {
-    padding: 12px 16px;
+    padding: 12px 8px;
     gap: 8px;
   }
 
   nav a[data-rota] {
-    padding: 6px 10px;
-    font-size: 0.875rem;
+    padding: 8px 10px;
+    font-size: 0.8rem;
   }
 
   .nav-logout {
-    padding: 6px 12px;
-    font-size: 0.875rem;
+    padding: 8px 10px;
+    font-size: 0.8rem;
+  }
+
+  /* Filtros: empilha campos verticalmente */
+  .filtros-container {
+    grid-template-columns: 1fr;
+  }
+
+  .filtros-container .btn-filtrar,
+  .filtros-container .btn-limpar {
+    grid-column: span 1;
+  }
+
+  /* Card de lançamento: muda para coluna, botões embaixo */
+  .item-movimentacao {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+
+  .item-movimentacao .acoes {
+    width: 100%;
+    justify-content: flex-end;
+  }
+
+  /* Evita overflow no título da página */
+  .page-header h2 {
+    overflow-wrap: anywhere;
+    word-break: break-word;
   }
 
   .login-container {
