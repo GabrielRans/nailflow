@@ -176,7 +176,7 @@ export async function criarFinanceiroRepository() {
      * Atualiza uma movimentação existente
      * @param {string} id
      * @param {Object} dadosAtualizados
-     * @returns {Promise<boolean>}
+     * @returns {Promise<Object>} Movimentação atualizada
      */
     async atualizar(id, dadosAtualizados) {
       const row = {
@@ -185,18 +185,34 @@ export async function criarFinanceiroRepository() {
         descricao: dadosAtualizados.descricao,
         categoria: dadosAtualizados.categoria,
         data: dadosAtualizados.data,
-        observacao: dadosAtualizados.observacao ?? null
+        observacao: dadosAtualizados.observacao ?? null,
+        atualizado_em: new Date().toISOString()
       };
 
-      const { error, count } = await supabase
+      // Log para debug - ver o payload exato
+      console.log('[FinanceiroRepo] Atualizando movimentação:', { id, estudioId, row });
+
+      const { data, error } = await supabase
         .from(TABELA)
         .update(row)
         .eq('estudio_id', estudioId)
         .eq('id', id)
-        .select('id', { count: 'exact', head: true });
+        .select()
+        .single();
 
-      if (error) throw error;
-      return count > 0;
+      if (error) {
+        console.error('[FinanceiroRepo] Erro Supabase Update:', error);
+        throw error;
+      }
+
+      if (!data) {
+        const err = new Error('Nenhuma linha atualizada (verifique RLS ou ID inexistente)');
+        console.error('[FinanceiroRepo] Update returned no data:', { id, estudioId });
+        throw err;
+      }
+
+      console.log('[FinanceiroRepo] Movimentação atualizada com sucesso:', data);
+      return rowParaMovimentacao(data);
     },
 
     /**

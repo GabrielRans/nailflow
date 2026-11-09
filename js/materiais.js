@@ -1,3 +1,5 @@
+console.log("materiais.js carregado");
+
 /**
  * Módulo de domínio para cadastro e controle de materiais - NailFlow
  * Suporte dual: Supabase (assíncrono) com injeção de dependência
