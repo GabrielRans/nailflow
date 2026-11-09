@@ -1205,12 +1205,43 @@ nav a[data-rota][aria-current="page"] {
     justify-content: flex-end;
   }
 
-  /* Evita overflow no título da página */
+  /* =============================================================================
+     DASHBOARD (F01) - Mobile
+     ============================================================================= */
+  /* Título e subtítulo do Dashboard */
   .page-header h2 {
-    overflow-wrap: anywhere;
+    font-size: 1.5rem;
+    line-height: 1.2;
     word-break: break-word;
+    overflow-wrap: anywhere;
+  }
+  .page-header p {
+    font-size: 0.875rem;
   }
 
+  /* Grid de indicadores */
+  .indicadores-grid {
+    grid-template-columns: 1fr 1fr; /* Mantém 2 colunas */
+    gap: 12px; /* Reduz o espaço entre os cards */
+  }
+  .card-indicador {
+    padding: 12px; /* Reduz o padding interno */
+    gap: 8px;
+  }
+  .card-indicador .icone {
+    font-size: 1.2rem; /* Reduz o ícone */
+  }
+  .card-indicador .valor {
+    font-size: 1rem; /* Reduz o valor para caber */
+  }
+
+  /* Botão "Nova movimentação" no mobile */
+  .container-acao .btn {
+    width: 100%; /* Ocupa a largura toda, como no wireframe */
+    text-align: center;
+  }
+
+  /* Login */
   .login-container {
     padding: 32px 24px;
     margin: 16px;
