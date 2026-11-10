@@ -12,6 +12,7 @@
     <link rel="stylesheet" href="./css/dashboard.css">
     <link rel="stylesheet" href="./css/movimentacao-form.css">
     <link rel="stylesheet" href="./css/movimentacoes.css">
+    <link rel="stylesheet" href="./css/materiais.css">
     <!-- Supabase + Auth (ES Modules - carregam primeiro para inicializar auth antes da navegação) -->
     <script type="module" src="./js/supabase-client.js"></script>
     <script type="module" src="./js/auth.js"></script>
@@ -21,6 +22,7 @@
     <script src="./js/movimentacoes-ui.js" defer></script>
     <script src="./js/dashboard-ui.js" defer></script>
     <script src="./js/navegacao.js" defer></script>
+    <script src="./js/materiais-ui.js" defer></script>
   </head>
   <body>
 
@@ -366,11 +368,25 @@
         <section data-tela="materiais" aria-labelledby="materiais-titulo">
           <h2 id="materiais-titulo" tabindex="-1">Materiais</h2>
 
-          <p>O controle de materiais está em desenvolvimento.</p>
-
           <div class="container-acao">
             <a href="#cadastro-material">Cadastrar material</a>
           </div>
+
+          <p id="materiais-feedback" class="materiais-feedback" role="status" aria-live="polite" hidden></p>
+
+          <div id="materiais-loading" class="materiais-loading" role="status" hidden>
+            <svg class="spinner" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+              <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" fill="none" stroke-dasharray="31.4 31.4" stroke-linecap="round"/>
+            </svg>
+            <span>Carregando materiais...</span>
+          </div>
+
+          <div id="materiais-vazio" class="materiais-vazio" hidden>
+            <h3 class="materiais-vazio__titulo">Nenhum material cadastrado</h3>
+            <p class="materiais-vazio__descricao">Cadastre seu primeiro material para acompanhar o estoque e receber alertas de reposição.</p>
+          </div>
+
+          <ul id="lista-materiais" class="lista-materiais" aria-label="Lista de materiais cadastrados"></ul>
         </section>
 
         <section
@@ -381,9 +397,81 @@
             Cadastro de materiais
           </h2>
 
-          <p>Cadastro de materiais - em desenvolvimento.</p>
+          <p id="form-material-erro" class="materiais-feedback materiais-feedback--erro" role="alert" hidden></p>
 
-          <div class="container-acao">
+          <form id="form-material" class="form-material" novalidate>
+            <div class="form-group form-group--full">
+              <label for="material-nome">Nome do material</label>
+              <input
+                type="text"
+                id="material-nome"
+                name="nome"
+                maxlength="100"
+                placeholder="Ex: Algodão prensado"
+                required
+                aria-describedby="material-nome-erro"
+              >
+              <p id="material-nome-erro" class="form-erro-campo" role="alert" hidden></p>
+            </div>
+
+            <div class="form-group">
+              <label for="material-qtd-disponivel">Quantidade disponível</label>
+              <input
+                type="number"
+                id="material-qtd-disponivel"
+                name="quantidadeDisponivel"
+                min="0"
+                step="any"
+                placeholder="0"
+                required
+                aria-describedby="material-qtd-disponivel-erro"
+              >
+              <p id="material-qtd-disponivel-erro" class="form-erro-campo" role="alert" hidden></p>
+            </div>
+
+            <div class="form-group">
+              <label for="material-unidade">Unidade de medida</label>
+              <select
+                id="material-unidade"
+                name="unidade"
+                required
+                aria-describedby="material-unidade-erro"
+              >
+                <option value="">Selecione</option>
+                <option value="un">un (unidade)</option>
+                <option value="pct">pct (pacote)</option>
+                <option value="cx">cx (caixa)</option>
+                <option value="ml">ml (mililitros)</option>
+                <option value="l">l (litros)</option>
+                <option value="g">g (gramas)</option>
+                <option value="kg">kg (quilos)</option>
+                <option value="par">par (par)</option>
+                <option value="kit">kit (kit)</option>
+              </select>
+              <p id="material-unidade-erro" class="form-erro-campo" role="alert" hidden></p>
+            </div>
+
+            <div class="form-group form-group--full">
+              <label for="material-qtd-minima">Quantidade mínima (alerta de reposição)</label>
+              <input
+                type="number"
+                id="material-qtd-minima"
+                name="quantidadeMinima"
+                min="0"
+                step="any"
+                placeholder="0"
+                required
+                aria-describedby="material-qtd-minima-erro"
+              >
+              <p id="material-qtd-minima-erro" class="form-erro-campo" role="alert" hidden></p>
+            </div>
+
+            <button type="submit" class="btn-submit-material" aria-busy="false">
+              <span>Salvar material</span>
+            </button>
+          </form>
+
+          <div class="container-acao" style="margin-top: 16px;">
             <a href="#materiais">Voltar para Materiais</a>
           </div>
         </section>
