@@ -1651,43 +1651,41 @@ nav a[data-rota][aria-current="page"] {
 }
 
 @media (min-width: 768px) {
-  /* Exibe o header e alinha tudo na mesma linha - Logo esquerda, Nav centro absoluto, Sair direita */
+  /* Exibe o header e alinha tudo na mesma linha usando Grid - centralização matemática */
   .app-header-topo {
-    display: flex;
-    justify-content: space-between;
+    display: grid;
+    grid-template-columns: 1fr auto 1fr; /* Logo (1fr) | Nav (auto) | Sair (1fr) */
     align-items: center;
     padding: 16px 40px;
     background: var(--card);
     border-bottom: 1px solid var(--border);
     width: 100%;
     max-width: 100%;
-    position: relative; /* Para posicionamento absoluto da nav */
   }
 
-  /* Alinha o logo à esquerda */
+  /* Alinha o logo à esquerda no seu 1fr */
   .app-header-topo h1 {
+    justify-self: start;
     margin: 0;
     font-size: 1.5rem;
     color: var(--text-primary);
-    flex-shrink: 0;
   }
 
-  /* Centraliza a nav ABSOLUTAMENTE no centro da tela */
+  /* Centraliza a nav matematicamente no auto column central */
   .app-header-topo nav[aria-label="Navegação principal"] {
-    position: absolute;
-    left: 50%;
-    transform: translateX(-50%);
+    justify-self: center;
     display: flex;
     gap: 24px;
     background: transparent;
     border: none;
     box-shadow: none;
+    position: static;
     padding: 0;
   }
 
-  /* Alinha o botão Sair à direita */
+  /* Alinha o botão Sair à direita no seu 1fr - tamanho natural, sem esticar */
   .app-header-topo .nav-logout {
-    flex-shrink: 0;
+    justify-self: end;
   }
 
   /* Esconde a barra inferior no desktop (força sobre o JS) */

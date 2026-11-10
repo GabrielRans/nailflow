@@ -99,13 +99,27 @@ function setCarregando(mostrar) {
 }
 
 /**
+ * Ordena movimentações por data decrescente, depois por ID para desempate
+ * @param {Array} movs
+ * @returns {Array} Novo array ordenado (não muta o original)
+ */
+function ordenarMovimentacoes(movs) {
+  return [...movs].sort((a, b) => {
+    if (b.data !== a.data) return b.data.localeCompare(a.data);
+    return b.id.localeCompare(a.id);
+  });
+}
+
+/**
  * Renderiza na interface as movimentações recebidas.
  * @param {Array} movimentacoes
  */
 function renderizarMovimentacoes(movimentacoes) {
+  // Garante ordenação: mais recentes primeiro (data desc, depois ID desc)
+  const movsOrdenadas = ordenarMovimentacoes(movimentacoes);
   listaMovimentacoes.replaceChildren();
 
-  if (movimentacoes.length === 0) {
+  if (movsOrdenadas.length === 0) {
     const itemVazio = document.createElement("div");
     itemVazio.className = "movimentacoes-vazio";
     itemVazio.setAttribute("role", "status");
@@ -121,7 +135,7 @@ function renderizarMovimentacoes(movimentacoes) {
     return;
   }
 
-  movimentacoes.forEach((movimentacao) => {
+  movsOrdenadas.forEach((movimentacao) => {
     const item = document.createElement("li");
     const ehReceita = movimentacao.tipo === "entrada";
     item.className = `item-movimentacao ${ehReceita ? "receita" : "despesa"}`;
