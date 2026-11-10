@@ -12,6 +12,7 @@ const ROTAS_VALIDAS = new Set([
   "dashboard",
   "financeiro",
   "movimentacao",
+  "nova-movimentacao", // alias para criar nova movimentação
   "materiais",
   "cadastro-material",
   "login",           // rota pública de login
@@ -23,6 +24,7 @@ const ROTAS_PROTEGIDAS = new Set([
   "dashboard",
   "financeiro",
   "movimentacao",
+  "nova-movimentacao",
   "materiais",
   "cadastro-material"
 ]);
@@ -59,9 +61,12 @@ function obterRotaAtual() {
  * Exibe a tela correspondente à rota
  */
 function exibirTela(rota) {
+  // Mapear rotas aliases para telas existentes
+  const telaParaExibir = rota === "nova-movimentacao" ? "movimentacao" : rota;
+
   const telas = document.querySelectorAll("[data-tela]");
   telas.forEach((tela) => {
-    tela.hidden = tela.dataset.tela !== rota;
+    tela.hidden = tela.dataset.tela !== telaParaExibir;
   });
 }
 
@@ -75,11 +80,22 @@ function alternarVisibilidadeApp(autenticado, emRedefinicaoSenha = false) {
   const telaLogin = document.getElementById("tela-login");
   const telaRedefinirSenha = document.getElementById("tela-redefinir-senha");
   const btnLogout = document.getElementById("btn-logout");
+  const headerTopo = document.querySelector('.app-header-topo');
+  const bottomNav = document.querySelector('.bottom-nav');
 
   if (appLogado) appLogado.hidden = !autenticado || emRedefinicaoSenha;
   if (telaLogin) telaLogin.hidden = autenticado || emRedefinicaoSenha;
   if (telaRedefinirSenha) telaRedefinirSenha.hidden = !emRedefinicaoSenha;
   if (btnLogout) btnLogout.hidden = !autenticado || emRedefinicaoSenha;
+
+  // Controla visibilidade do header topo e bottom nav
+  if (autenticado && !emRedefinicaoSenha) {
+    if (headerTopo) headerTopo.style.display = 'flex';
+    if (bottomNav) bottomNav.style.display = 'flex';
+  } else {
+    if (headerTopo) headerTopo.style.display = 'none';
+    if (bottomNav) bottomNav.style.display = 'none';
+  }
 }
 
 /**
@@ -128,6 +144,7 @@ function atualizarNavegacao(gerenciarFocoAtivo = true) {
 
   const areaPrincipal = {
     movimentacao: "financeiro",
+    "nova-movimentacao": "financeiro",
     "cadastro-material": "materiais"
   }[rota] ?? rota;
 
@@ -140,10 +157,16 @@ function atualizarNavegacao(gerenciarFocoAtivo = true) {
   });
 
   const modoEdicao = rota === "movimentacao" && focoEdicaoPendente;
-  const retornandoDaEdicao = rotaAnterior === "movimentacao" && rota === "financeiro" && botaoOrigemEdicao !== null;
+  const retornandoDaEdicao = (rotaAnterior === "movimentacao" || rotaAnterior === "nova-movimentacao") && rota === "financeiro" && botaoOrigemEdicao !== null;
   const origemDisponivel = retornandoDaEdicao && botaoOrigemEdicao.isConnected && !botaoOrigemEdicao.disabled;
 
-  focoEdicaoPendente = false;
+  // Para nova-movimentacao, garantir modo de criação (limpar formulário)
+  if (rota === "nova-movimentacao") {
+    focoEdicaoPendente = false;
+    limparFormularioMovimentacao();
+  } else {
+    focoEdicaoPendente = false;
+  }
 
   if (gerenciarFocoAtivo) {
     if (origemDisponivel) {
@@ -159,6 +182,30 @@ function atualizarNavegacao(gerenciarFocoAtivo = true) {
   }
 
   rotaAnterior = rota;
+}
+
+/**
+ * Limpa o formulário de movimentação para modo de criação
+ */
+function limparFormularioMovimentacao() {
+  const form = document.getElementById("form-movimentacao");
+  if (form) {
+    form.reset();
+    const idInput = document.getElementById("movimentacao-id");
+    if (idInput) idInput.value = "";
+
+    // Resetar botões de tipo (Entrada/Saída)
+    document.querySelectorAll(".btn-tipo").forEach((botao) => {
+      botao.classList.remove("ativo");
+      botao.setAttribute("aria-checked", "false");
+    });
+    const tipoSelect = document.getElementById("tipo");
+    if (tipoSelect) tipoSelect.value = "";
+
+    // Focar no primeiro campo
+    const primeiroCampo = form.querySelector("input, select");
+    primeiroCampo?.focus();
+  }
 }
 
 /**
@@ -179,7 +226,9 @@ function navegarParaEdicao(botaoOrigem) {
  * Gerencia foco ao entrar em uma tela
  */
 function gerenciarFoco(rota, modoEdicao = false) {
-  const tela = document.querySelector(`[data-tela="${rota}"]`);
+  // Mapear rotas aliases para telas existentes (mesma lógica de exibirTela)
+  const telaParaFocar = rota === "nova-movimentacao" ? "movimentacao" : rota;
+  const tela = document.querySelector(`[data-tela="${telaParaFocar}"]`);
   if (!tela) return;
 
   const destino = modoEdicao ? tela.querySelector("#tipo") : tela.querySelector("h2");

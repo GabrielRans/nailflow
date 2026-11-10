@@ -95,12 +95,14 @@ function inicializarDashboard() {
   // Se já autenticado e autorizado, carrega imediatamente
   if (window.NailFlow?.auth?.autorizado === true) {
     carregarIndicadores();
+    carregarUltimasMovimentacoes();
     return;
   }
 
   // Caso contrário, aguarda o evento auth:login (AuthN + AuthZ OK)
   window.addEventListener('auth:login', async () => {
     await carregarIndicadores();
+    await carregarUltimasMovimentacoes();
   }, { once: true });
 }
 
@@ -112,6 +114,107 @@ window.addEventListener('auth:logout', () => {
     estadoDashboard.hidden = true;
   }
 });
+
+/**
+ * Formata data para exibição
+ * @param {string} data - Data no formato YYYY-MM-DD
+ * @returns {string} Data formatada DD/MM
+ */
+function formatarDataCurta(data) {
+  const [ano, mes, dia] = data.split('-');
+  return `${dia}/${mes}`;
+}
+
+/**
+ * Carrega e renderiza as últimas 5 movimentações no Dashboard
+ */
+async function carregarUltimasMovimentacoes() {
+  const container = document.querySelector('#ultimas-movimentacoes');
+  if (!container) return;
+
+  try {
+    const movs = await window.NailFlow.financeiro.listarMovimentacoesAsync();
+
+    // Ordena por data decrescente, depois por ID para desempate
+    movs.sort((a, b) => {
+      if (b.data !== a.data) return b.data.localeCompare(a.data);
+      return b.id.localeCompare(a.id);
+    });
+
+    // Pega apenas as 5 primeiras
+    const ultimas = movs.slice(0, 5);
+
+    // Limpa o container
+    container.innerHTML = '';
+
+    if (ultimas.length === 0) {
+      container.innerHTML = '<p style="color: var(--text-secondary); text-align: center; padding: 16px;">Nenhuma movimentação recente</p>';
+      return;
+    }
+
+    // Formata moeda
+    const formatadorMoeda = new Intl.NumberFormat("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+    });
+
+    // Renderiza cada movimentação
+    ultimas.forEach((movimentacao) => {
+      const item = document.createElement("li");
+      const ehReceita = movimentacao.tipo === "entrada";
+      item.className = `item-movimentacao ${ehReceita ? "receita" : "despesa"}`;
+
+      // Link para o financeiro (card clicável)
+      const link = document.createElement("a");
+      link.href = "#financeiro";
+      link.className = "movimentacao-link";
+      link.setAttribute("aria-label", `Ver detalhes de ${movimentacao.descricao} no Financeiro`);
+
+      // Ícone circular
+      const icone = document.createElement("div");
+      icone.className = `icone-movimentacao ${ehReceita ? "receita" : "despesa"}`;
+      icone.setAttribute("aria-hidden", "true");
+      icone.textContent = ehReceita ? "↑" : "↓";
+
+      // Info principal
+      const infoPrincipal = document.createElement("div");
+      infoPrincipal.className = "info-principal";
+
+      const descricao = document.createElement("strong");
+      descricao.className = "descricao";
+      descricao.textContent = movimentacao.descricao;
+
+      const detalhes = document.createElement("span");
+      detalhes.className = "detalhes";
+      detalhes.textContent = `${movimentacao.categoria} • ${formatarDataCurta(movimentacao.data)}`;
+
+      infoPrincipal.append(descricao, detalhes);
+
+      // Container para valor + seta (permite alinhar à direita no desktop)
+      const valorSetaContainer = document.createElement("div");
+      valorSetaContainer.className = "valor-seta-container";
+
+      // Valor
+      const valor = document.createElement("strong");
+      valor.className = `valor ${ehReceita ? "receita" : "despesa"}`;
+      valor.textContent = formatadorMoeda.format(movimentacao.valor);
+
+      // Seta/chevron indicando navegação
+      const seta = document.createElement("span");
+      seta.className = "seta-navegacao";
+      seta.setAttribute("aria-hidden", "true");
+      seta.textContent = ">";
+
+      valorSetaContainer.append(valor, seta);
+      link.append(icone, infoPrincipal, valorSetaContainer);
+      item.append(link);
+      container.append(item);
+    });
+  } catch (err) {
+    console.error('[Dashboard] Erro ao carregar últimas movimentações:', err);
+    container.innerHTML = '<p style="color: var(--error-text); text-align: center; padding: 16px;">Erro ao carregar movimentações</p>';
+  }
+}
 
 // Inicializa no DOMContentLoaded
 document.addEventListener("DOMContentLoaded", inicializarDashboard);
@@ -127,5 +230,7 @@ document.addEventListener("movimentacoes:atualizadas", async (event) => {
       return atendeInicial && atendeFinal;
     });
     renderizarIndicadoresFinanceiros(movsFiltradas);
+    // Atualiza também a lista das últimas movimentações
+    await carregarUltimasMovimentacoes();
   }
 });

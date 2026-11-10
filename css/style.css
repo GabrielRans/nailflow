@@ -5,14 +5,14 @@
    --bg: #F5F6F8 (fundo da página)
    --card: #FFFFFF (cartões, containers)
    --text-primary: #26364D (texto principal)
-   --text-secondary: #5D6B7D (texto secundário)
+   --text-secondary: #667085 (texto secundário)
    --primary: #7C435C (botão primário, links)
-   --primary-hover: #66374B (hover do primário)
+   --primary-hover: #63344A (hover do primário)
    --primary-active: #4F2A3A (active do primário)
-   --border: #D0D5DD (bordas)
-   --error-bg: #FEF2F2 (fundo erro)
-   --error-border: #FECACA (borda erro)
-   --error-text: #991B1B (texto erro)
+   --border: #E1E5EA (bordas)
+   --error-bg: #FCECEF (fundo erro)
+   --error-border: #D65D68 (borda erro)
+   --error-text: #D65D68 (texto erro)
    --focus: #7C435C (foco visível)
 */
 
@@ -21,17 +21,17 @@
   --bg: #F5F6F8;
   --card: #FFFFFF;
   --text-primary: #26364D;
-  --text-secondary: #5D6B7D;
+  --text-secondary: #667085;
   --primary: #7C435C;
-  --primary-hover: #66374B;
+  --primary-hover: #63344A;
   --primary-active: #4F2A3A;
-  --border: #D0D5DD;
+  --border: #E1E5EA;
   --border-focus: #7C435C;
-  --error-bg: #FEF2F2;
-  --error-border: #FECACA;
-  --error-text: #991B1B;
+  --error-bg: #FCECEF;
+  --error-border: #D65D68;
+  --error-text: #D65D68;
   --google-bg: #FFFFFF;
-  --google-border: #D0D5DD;
+  --google-border: #E1E5EA;
   --google-hover: #F5F6F8;
   --shadow-sm: 0 1px 2px rgba(38, 54, 77, 0.05);
   --shadow-md: 0 4px 12px rgba(38, 54, 77, 0.08);
@@ -41,80 +41,7 @@
   --transition: 160ms ease;
 }
 
-/* =============================================================================
-   MODO ESCURO (Dark Mode)
-   ============================================================================= */
-[data-theme="dark"] {
-  --bg: #121212;
-  --card: #1E1E24;
-  --text-primary: #E2E8F0;
-  --text-secondary: #94A3B8;
-  --primary: #7C435C;
-  --primary-hover: #9A5573;
-  --primary-active: #66374B;
-  --border: #334155;
-  --border-focus: #9A5573;
-  --error-bg: #451A1A;
-  --error-border: #7F1D1D;
-  --error-text: #FCA5A5;
-  --google-bg: #1E1E24;
-  --google-border: #334155;
-  --google-hover: #2D3240;
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.2);
-  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.3);
-  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.4);
-}
-
-/* Botão de alternância de tema */
-.btn-tema {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 44px;
-  height: 44px;
-  border: none;
-  border-radius: var(--radius-sm);
-  background: transparent;
-  color: var(--text-secondary);
-  cursor: pointer;
-  transition: color var(--transition), background-color var(--transition);
-  padding: 0;
-}
-
-.btn-tema:hover {
-  color: var(--text-primary);
-  background-color: color-mix(in srgb, var(--primary) 10%, transparent);
-}
-
-.btn-tema:focus-visible {
-  outline: 3px solid var(--focus);
-  outline-offset: 2px;
-}
-
-.btn-tema svg {
-  width: 22px;
-  height: 22px;
-}
-
-/* Ícone de sol (visível no modo escuro) */
-.btn-tema .icone-sol {
-  display: none;
-}
-
-.btn-tema .icone-lua {
-  display: block;
-}
-
-/* Quando o tema é dark, mostra o sol e esconde a lua */
-[data-theme="dark"] .btn-tema .icone-sol {
-  display: block;
-}
-
-[data-theme="dark"] .btn-tema .icone-lua {
-  display: none;
-}
-
-/* Transição suave para mudança de tema */
+/* Transição suave para componentes */
 html {
   transition: background-color var(--transition), color var(--transition);
 }
@@ -153,6 +80,12 @@ html {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* Prevenção de overflow horizontal global */
+html, body {
+  max-width: 100vw;
+  overflow-x: hidden;
+}
+
 body {
     margin: 0;
     font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -170,6 +103,14 @@ main {
   padding: 32px 20px;
   flex: 1;
   width: 100%;
+  overflow-x: hidden;
+  box-sizing: border-box;
+}
+
+.lista-lancamentos, .lista-movimentacoes {
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
 }
 
 form {
@@ -198,9 +139,7 @@ button {
 .container-acao {
   display: flex;
   justify-content: center;
-  align-items: center;
   width: 100%;
-  text-align: center;
 }
 
 /* Links de acesso aos fluxos F03 e F05 (alvo mínimo de toque 44 × 44 px — WCAG 2.5.5) */
@@ -215,7 +154,7 @@ a[href="#cadastro-material"] {
   border: 1px solid var(--primary);
   border-radius: 12px;
   background-color: var(--primary);
-  color: #FFFFFF;
+  color: var(--card);
   font-family: inherit;
   font-size: 1rem;
   font-weight: 600;
@@ -302,7 +241,7 @@ a[href="#cadastro-material"]:focus-visible {
 
 .btn--primario {
   background-color: var(--primary);
-  color: #FFFFFF;
+  color: var(--card);
   min-height: 52px;
   padding: 14px 24px;
 }
@@ -350,13 +289,13 @@ a[href="#cadastro-material"]:focus-visible {
 }
 
 /* =============================================================================
-   NAVEGAÇÃO COM BOTÃO LOGOUT
+   NAVEGAÇÃO COM BOTÃO LOGOUT (PR #40)
    ============================================================================= */
 nav[aria-label="Navegação principal"] {
   display: flex;
-  flex-wrap: wrap;
+  justify-content: center;
   align-items: center;
-  gap: 12px;
+  gap: 16px;
   padding: 16px 20px;
   max-width: 720px;
   margin: 0 auto;
@@ -384,7 +323,7 @@ nav a[data-rota]:hover {
 
 nav a[data-rota][aria-current="page"] {
   background-color: var(--primary);
-  color: #FFFFFF;
+  color: var(--card);
 }
 
 .nav-logout {
@@ -407,6 +346,419 @@ nav a[data-rota][aria-current="page"] {
 .nav-logout:focus-visible {
   outline: 3px solid var(--focus);
   outline-offset: 2px;
+}
+
+/* =============================================================================
+   DASHBOARD (F01)
+   ============================================================================= */
+.page-header {
+  margin-bottom: 24px;
+}
+
+.page-header h2 {
+  margin: 0 0 4px;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.page-header p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+}
+
+/* Grid de Indicadores */
+.indicadores-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.card-indicador {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.card-indicador .icone {
+  font-size: 1.5rem;
+  line-height: 1;
+  color: var(--primary);
+  flex-shrink: 0;
+}
+
+.card-indicador .info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.card-indicador .label {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.card-indicador .valor {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+
+/* Container que centraliza o botão (PR #40) */
+.container-acao {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  margin-bottom: 24px;
+}
+
+/* Card de Alerta de Materiais */
+.card-alerta {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  margin-bottom: 24px;
+}
+
+.icone-alerta {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--error-bg);
+  color: var(--error-text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.texto-alerta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.texto-alerta strong {
+  font-size: 0.875rem;
+  color: var(--text-primary);
+}
+
+.texto-alerta span {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+/* Últimas movimentações */
+.lista-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.lista-header h3 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.link-ver-todas {
+  font-size: 0.875rem;
+  color: var(--primary);
+  font-weight: 500;
+  text-decoration: none;
+  transition: color var(--transition);
+}
+
+.link-ver-todas:hover {
+  color: var(--primary-hover);
+  text-decoration: underline;
+}
+
+.lista-movimentacoes {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.lista-movimentacoes:empty::before {
+  content: "Nenhuma movimentação recente";
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  padding: 16px;
+  text-align: center;
+}
+
+/* =============================================================================
+   FINANCEIRO / MOVIMENTAÇÕES (F02)
+   ============================================================================= */
+
+/* Grid dos Filtros (Lado a lado) */
+.filtros-container {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 32px;
+  padding: 20px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+/* Botão Filtrar e Limpar ocupam a linha toda */
+.filtros-container .btn-filtrar {
+  grid-column: span 2;
+  margin-top: 8px;
+  background-color: var(--primary);
+  color: #fff;
+}
+
+.filtros-container .btn-filtrar:hover {
+  background-color: var(--primary-hover);
+}
+
+.filtros-container .btn-limpar {
+  grid-column: span 2;
+  margin-top: 8px;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+}
+
+.filtros-container .btn-limpar:hover {
+  background: color-mix(in srgb, var(--text-primary) 5%, transparent);
+  border-color: var(--text-secondary);
+}
+
+.filtros-container .form-group {
+  margin: 0;
+}
+
+/* Cabeçalho da lista de lançamentos */
+.lista-header-lancamentos {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.lista-header-lancamentos h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  color: var(--text-primary);
+}
+
+.lista-header-lancamentos .link-nova-movimentacao {
+  color: var(--primary);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.lista-header-lancamentos .link-nova-movimentacao:hover {
+  color: var(--primary-hover);
+  text-decoration: underline;
+}
+
+/* Card de cada lançamento */
+.item-movimentacao {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-bottom: 12px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Ícone circular da movimentação */
+.icone-movimentacao {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  flex-shrink: 0;
+}
+
+.icone-movimentacao.receita {
+  color: #27856B;
+}
+
+.icone-movimentacao.despesa {
+  color: var(--error-text);
+}
+
+.item-movimentacao .info-principal {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+}
+
+.item-movimentacao .descricao {
+  font-weight: 500;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
+}
+
+.item-movimentacao .detalhes {
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
+}
+
+.item-movimentacao .valor {
+  font-weight: 700;
+  font-size: 1rem;
+  white-space: nowrap;
+}
+
+.item-movimentacao .valor.receita {
+  color: #27856B;
+}
+
+.item-movimentacao .valor.despesa {
+  color: var(--error-text);
+}
+
+.item-movimentacao .acoes {
+  display: flex;
+  gap: 6px;
+  flex-wrap: nowrap;
+}
+
+/* A parte da direita não pode encolher */
+.direita-card {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+/* Agrupamento do valor e ações à direita */
+.valor-e-acoes {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.item-movimentacao .info-principal {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.item-movimentacao .info-principal .descricao {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.item-movimentacao .btn-acao {
+  white-space: nowrap;
+  padding: 4px 8px;
+  font-size: 0.75rem;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background-color var(--transition), border-color var(--transition), color var(--transition);
+}
+
+.item-movimentacao .btn-acao.editar {
+  border: 1px solid #007BFF;
+  background: transparent;
+  color: #007BFF;
+}
+
+.item-movimentacao .btn-acao.editar:hover {
+  background: color-mix(in srgb, #007BFF 10%, transparent);
+  color: #007BFF;
+}
+
+.item-movimentacao .btn-acao.excluir {
+  border: 1px solid var(--error-text);
+  background: transparent;
+  color: var(--error-text);
+}
+
+.item-movimentacao .btn-acao.excluir:hover {
+  background: color-mix(in srgb, var(--error-text) 10%, transparent);
+  color: var(--error-text);
+}
+
+.item-movimentacao .btn-acao:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+
+/* Empty state para lista de lançamentos */
+.lista-lancamentos:empty::before {
+  content: "Nenhum lançamento encontrado";
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  padding: 16px;
+  text-align: center;
+  display: block;
+}
+
+/* Loading state */
+.movimentacoes-carregando {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  color: var(--text-secondary);
+  gap: 12px;
+}
+
+.movimentacoes-carregando .spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid var(--border);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
 }
 
 /* =============================================================================
@@ -738,34 +1090,364 @@ nav a[data-rota][aria-current="page"] {
 }
 
 /* =============================================================================
+   F03 - NOVA MOVIMENTAÇÃO
+   ============================================================================= */
+.form-movimentacao {
+  display: grid;
+  gap: 20px;
+  max-width: 600px;
+}
+
+.form-movimentacao > div {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.form-movimentacao label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.form-movimentacao input[type="text"],
+.form-movimentacao input[type="number"],
+.form-movimentacao input[type="date"],
+.form-movimentacao select,
+.form-movimentacao textarea {
+  padding: 12px 16px;
+  font-size: 1rem;
+  font-family: inherit;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  color: var(--text-primary);
+  transition: border-color var(--transition), box-shadow var(--transition);
+}
+
+.form-movimentacao input:focus,
+.form-movimentacao select:focus,
+.form-movimentacao textarea:focus {
+  outline: none;
+  border-color: var(--focus);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--focus) 20%, transparent);
+}
+
+.form-movimentacao input::placeholder,
+.form-movimentacao textarea::placeholder {
+  color: var(--text-secondary);
+}
+
+/* Botões de alternância de tipo (Entrada/Saída) */
+.tipo-botoes {
+  display: flex;
+  gap: 12px;
+}
+
+.btn-tipo {
+  flex: 1;
+  padding: 14px 20px;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  font-family: inherit;
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--card);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: border-color var(--transition), background-color var(--transition), color var(--transition), box-shadow var(--transition);
+}
+
+.btn-tipo:hover {
+  border-color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 5%, transparent);
+}
+
+.btn-tipo:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.btn-tipo.ativo {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: var(--primary-contrast);
+  box-shadow: var(--shadow-sm);
+}
+
+.btn-tipo[data-tipo="entrada"].ativo {
+  border-color: #27856B;
+  background: #27856B;
+  color: var(--card);
+}
+
+.btn-tipo[data-tipo="saida"].ativo {
+  border-color: var(--error-text);
+  background: var(--error-text);
+  color: var(--card);
+}
+
+/* Ações do formulário */
+.acoes-form {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.acoes-form .btn {
+  width: 100%;
+  display: block;
+}
+
+/* Botão secundário */
+.btn--secundario {
+  background: var(--card);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+}
+
+.btn--secundario:hover {
+  background: color-mix(in srgb, var(--text-primary) 5%, transparent);
+  border-color: var(--text-secondary);
+}
+
+.btn--secundario:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+
+/* Campos específicos do formulário */
+.campo-tipo .form-erro {
+  margin-top: 4px;
+}
+
+/* =============================================================================
    RESPONSIVIDADE
    ============================================================================= */
 @media (max-width: 480px) {
+  /* Navegação: reduz padding e fonte */
   nav[aria-label="Navegação principal"] {
-    padding: 12px 16px;
+    padding: 12px 8px;
     gap: 8px;
   }
 
   nav a[data-rota] {
-    padding: 6px 10px;
-    font-size: 0.875rem;
-  }
-
-  .btn-tema {
-    width: 40px;
-    height: 40px;
-  }
-
-  .btn-tema svg {
-    width: 20px;
-    height: 20px;
+    padding: 8px 10px;
+    font-size: 0.8rem;
   }
 
   .nav-logout {
-    padding: 6px 12px;
+    padding: 8px 10px;
+    font-size: 0.8rem;
+  }
+
+  /* Filtros: layout flexível com espaçamento e wrap no mobile */
+  .filtros-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px; /* Espaçamento maior entre os inputs */
+    width: 100%;
+    box-sizing: border-box;
+    padding: 12px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+  }
+  .filtros-container .form-group {
+    flex: 1;
+    min-width: 0; /* Permite que encolha abaixo de 140px se necessário */
+    margin: 0;
+  }
+  .filtros-container input[type="date"] {
+    width: 100%;
+    padding: 10px 12px;
+    box-sizing: border-box;
+    font-size: 1rem; /* Evita zoom no iOS */
+  }
+  .filtros-container .btn-filtrar {
+    flex-basis: 100%;
+    width: 100%;
+    margin-top: 4px;
+  }
+  .filtros-container .btn-limpar {
+    display: none; /* Escondido no mobile */
+  }
+
+  /* Telas muito estreitas (< 400px): empilha os inputs verticalmente */
+  @media (max-width: 400px) {
+    .filtros-container {
+      flex-direction: column;
+      gap: 8px;
+    }
+    .filtros-container .form-group {
+      width: 100%;
+    }
+  }
+
+  /* =============================================================================
+     CARDS DE MOVIMENTAÇÃO - Mobile (Dashboard F01 e Financeiro F02)
+     ============================================================================= */
+
+  /* Dashboard: cards sem botões, apenas seta de navegação */
+  .dashboard .item-movimentacao {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px;
+    gap: 8px;
+  }
+  .dashboard .item-movimentacao .movimentacao-link {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    gap: 12px;
+    text-decoration: none;
+    color: inherit;
+  }
+  .dashboard .item-movimentacao .movimentacao-link:hover,
+  .dashboard .item-movimentacao .movimentacao-link:focus {
+    text-decoration: none;
+  }
+  .dashboard .item-movimentacao .info-principal {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+  .dashboard .item-movimentacao .descricao {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .dashboard .item-movimentacao .valor {
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .dashboard .item-movimentacao .seta-navegacao {
+    flex-shrink: 0;
+    color: var(--text-secondary);
+    font-size: 1.25rem;
+    font-weight: bold;
+  }
+
+  /* Financeiro: cards com valor e botões à direita - CSS Grid à prova de falhas */
+  .financeiro .item-movimentacao,
+  .lista-lancamentos .item-movimentacao {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto; /* Ícone | Texto | Valor/Botões */
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    box-sizing: border-box;
+    width: 100%;
+  }
+
+  .financeiro .item-movimentacao .icone-movimentacao,
+  .lista-lancamentos .item-movimentacao .icone-movimentacao {
+    grid-column: 1;
+  }
+
+  .financeiro .item-movimentacao .info-principal,
+  .lista-lancamentos .item-movimentacao .info-principal {
+    grid-column: 2;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .financeiro .item-movimentacao .info-principal strong,
+  .financeiro .item-movimentacao .info-principal span,
+  .lista-lancamentos .item-movimentacao .info-principal strong,
+  .lista-lancamentos .item-movimentacao .info-principal span {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: block;
+  }
+
+  .financeiro .item-movimentacao .direita-card,
+  .lista-lancamentos .item-movimentacao .direita-card {
+    grid-column: 3;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+
+  .financeiro .item-movimentacao .acoes,
+  .lista-lancamentos .item-movimentacao .acoes {
+    display: flex;
+    gap: 4px;
+    flex-wrap: nowrap;
+  }
+
+  .financeiro .item-movimentacao .btn-acao,
+  .lista-lancamentos .item-movimentacao .btn-acao {
+    padding: 4px 6px;
+    font-size: 0.7rem;
+    white-space: nowrap;
+  }
+
+  /* =============================================================================
+     DASHBOARD (F01) - Mobile
+     ============================================================================= */
+  /* Cabeçalho: empilha título e botão */
+  .page-header {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+
+  .page-header .container-acao {
+    width: 100%;
+    display: block;
+  }
+
+  .page-header .container-acao .btn {
+    width: 100%;
+    text-align: center;
+    display: block;
+  }
+
+  /* Título e subtítulo do Dashboard */
+  .page-header h2 {
+    font-size: 1.5rem;
+    line-height: 1.2;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+  }
+  .page-header p {
     font-size: 0.875rem;
   }
 
+  /* Grid de indicadores */
+  .indicadores-grid {
+    grid-template-columns: 1fr 1fr; /* Mantém 2 colunas */
+    gap: 12px; /* Reduz o espaço entre os cards */
+  }
+  .card-indicador {
+    padding: 12px; /* Reduz o padding interno */
+    gap: 8px;
+  }
+  .card-indicador .icone {
+    font-size: 1.2rem; /* Reduz o ícone */
+  }
+  .card-indicador .valor {
+    font-size: 1rem; /* Reduz o valor para caber */
+  }
+
+  /* Botão "Nova movimentação" no mobile (fallback para outras telas) */
+  .container-acao .btn {
+    width: 100%; /* Ocupa a largura toda, como no wireframe */
+    text-align: center;
+  }
+
+  /* Login */
   .login-container {
     padding: 32px 24px;
     margin: 16px;
@@ -774,6 +1456,265 @@ nav a[data-rota][aria-current="page"] {
 
   main {
     padding: 24px 16px;
+  }
+}
+
+/* =============================================================================
+   RESPONSIVIDADE - DESKTOP / TABLET
+   ============================================================================= */
+@media (min-width: 768px) {
+  /* Container Principal */
+  main {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 40px 20px;
+  }
+
+  /* Barra de Navegação - Ocupa 100% da tela com conteúdo centralizado */
+  nav[aria-label="Navegação principal"] {
+    max-width: 100%;
+    padding: 16px 40px;
+    justify-content: flex-start;
+    background: var(--card);
+    border-bottom: 1px solid var(--border);
+    border-radius: 0;
+    box-shadow: none;
+    gap: 24px;
+  }
+  nav a[data-rota] {
+    padding: 10px 16px;
+  }
+  .nav-logout {
+    margin-left: auto;
+  }
+
+  /* Cabeçalho do Dashboard - Botão ao lado do título */
+  .page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 32px;
+  }
+
+  .header-texto h2 {
+    margin-bottom: 4px;
+  }
+
+  .header-texto p {
+    margin: 0;
+    color: var(--text-secondary);
+  }
+
+  .page-header .container-acao {
+    display: block;
+    width: auto;
+    margin-bottom: 0;
+  }
+
+  /* Grid de Indicadores - Mais espaçamento */
+  .indicadores-grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 24px;
+    margin-bottom: 32px;
+  }
+  .card-indicador {
+    padding: 24px;
+    align-items: flex-start;
+  }
+
+  /* Filtros (F02) */
+  .filtros-container {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-end;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .filtros-container .form-group {
+    flex: 1;
+    min-width: 200px;
+  }
+  .filtros-container .btn-filtrar,
+  .filtros-container .btn-limpar {
+    width: auto;
+    margin-top: 0;
+    flex: none;
+  }
+
+  /* Formulários (F03 e F05) */
+  .form-movimentacao {
+    max-width: 700px;
+    margin: 0 auto;
+  }
+
+  /* Dashboard: Últimas movimentações - layout horizontal */
+  .dashboard .movimentacao-link {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    gap: 16px;
+    text-decoration: none;
+  }
+
+  .dashboard .info-principal {
+    flex: 1; /* Texto ocupa o espaço do meio */
+    display: flex;
+    flex-direction: column;
+  }
+
+  .dashboard .valor-seta-container {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-shrink: 0;
+  }
+}
+
+/* =============================================================================
+   APP HEADER TOPO & BOTTOM NAV - Base (escondido por padrão, JS controla)
+   ============================================================================= */
+.app-header-topo,
+.bottom-nav {
+  display: none;
+}
+
+/* =============================================================================
+   BOTTOM NAVIGATION (Mobile)
+   ============================================================================= */
+/* Base: escondido no desktop */
+.bottom-nav {
+  display: none;
+}
+
+/* =============================================================================
+   APP HEADER TOPO (Mobile)
+   ============================================================================= */
+.app-header-topo {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  background: var(--card);
+  border-bottom: 1px solid var(--border);
+}
+.app-header-topo h1 {
+  margin: 0;
+  font-size: 1.5rem;
+  color: var(--text-primary);
+}
+
+@media (max-width: 480px) {
+  /* Exibe a barra inferior */
+  .bottom-nav {
+    display: flex;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    background: var(--card);
+    border-top: 1px solid var(--border);
+    justify-content: space-around;
+    padding: 10px 0;
+    z-index: 1000;
+  }
+
+  .bottom-nav .nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    color: var(--text-secondary);
+    text-decoration: none;
+    font-size: 0.75rem;
+    font-weight: 500;
+  }
+
+  /* Ajuste no item ativo da barra inferior */
+  .bottom-nav .nav-item[aria-current="page"] {
+    color: var(--primary);
+    background-color: transparent; /* Remove o quadrado roxo */
+    border-bottom: 3px solid var(--primary); /* Traço embaixo */
+    padding-bottom: 4px;
+  }
+
+  /* Esconde a nav do topo no mobile para não ficar com espaço vazio */
+  nav[aria-label="Navegação principal"] {
+    display: none;
+  }
+
+  /* Garante que o conteúdo não fique escondido atrás da barra inferior */
+  main {
+    padding-bottom: 80px;
+  }
+}
+
+@media (min-width: 768px) {
+  /* Exibe o header e alinha tudo na mesma linha usando Grid - centralização matemática */
+  .app-header-topo {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr; /* Logo (1fr) | Nav (auto) | Sair (1fr) */
+    align-items: center;
+    padding: 16px 40px;
+    background: var(--card);
+    border-bottom: 1px solid var(--border);
+    width: 100%;
+    max-width: 100%;
+  }
+
+  /* Alinha o logo à esquerda no seu 1fr */
+  .app-header-topo h1 {
+    justify-self: start;
+    margin: 0;
+    font-size: 1.5rem;
+    color: var(--text-primary);
+  }
+
+  /* Centraliza a nav matematicamente no auto column central */
+  .app-header-topo nav[aria-label="Navegação principal"] {
+    justify-self: center;
+    display: flex;
+    gap: 24px;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    position: static;
+    padding: 0;
+  }
+
+  /* Alinha o botão Sair à direita no seu 1fr - tamanho natural, sem esticar */
+  .app-header-topo .nav-logout {
+    justify-self: end;
+  }
+
+  /* Esconde a barra inferior no desktop (força sobre o JS) */
+  .bottom-nav {
+    display: none !important;
+  }
+
+  /* Estilos dos links de navegação - sem fundo roxo, com traço embaixo */
+  nav a[data-rota] {
+    background-color: transparent !important;
+    color: var(--text-primary);
+    border-radius: 0;
+    padding: 8px 0;
+    border-bottom: 3px solid transparent; /* Prepara o espaço do traço */
+    transition: color var(--transition), border-color var(--transition);
+    text-decoration: none;
+  }
+
+  nav a[data-rota]:hover {
+    background-color: transparent !important;
+    color: var(--primary-hover);
+  }
+
+  /* O traço do item ativo (igual ao mobile) */
+  nav a[data-rota][aria-current="page"] {
+    background-color: transparent !important;
+    color: var(--primary) !important;
+    border-bottom: 3px solid var(--primary);
+    font-weight: 600;
   }
 }
 
