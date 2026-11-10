@@ -5,14 +5,14 @@
    --bg: #F5F6F8 (fundo da página)
    --card: #FFFFFF (cartões, containers)
    --text-primary: #26364D (texto principal)
-   --text-secondary: #5D6B7D (texto secundário)
+   --text-secondary: #667085 (texto secundário)
    --primary: #7C435C (botão primário, links)
-   --primary-hover: #66374B (hover do primário)
+   --primary-hover: #63344A (hover do primário)
    --primary-active: #4F2A3A (active do primário)
-   --border: #D0D5DD (bordas)
-   --error-bg: #FEF2F2 (fundo erro)
-   --error-border: #FECACA (borda erro)
-   --error-text: #991B1B (texto erro)
+   --border: #E1E5EA (bordas)
+   --error-bg: #FCECEF (fundo erro)
+   --error-border: #D65D68 (borda erro)
+   --error-text: #D65D68 (texto erro)
    --focus: #7C435C (foco visível)
 */
 
@@ -21,17 +21,17 @@
   --bg: #F5F6F8;
   --card: #FFFFFF;
   --text-primary: #26364D;
-  --text-secondary: #5D6B7D;
+  --text-secondary: #667085;
   --primary: #7C435C;
-  --primary-hover: #66374B;
+  --primary-hover: #63344A;
   --primary-active: #4F2A3A;
-  --border: #D0D5DD;
+  --border: #E1E5EA;
   --border-focus: #7C435C;
-  --error-bg: #FEF2F2;
-  --error-border: #FECACA;
-  --error-text: #991B1B;
+  --error-bg: #FCECEF;
+  --error-border: #D65D68;
+  --error-text: #D65D68;
   --google-bg: #FFFFFF;
-  --google-border: #D0D5DD;
+  --google-border: #E1E5EA;
   --google-hover: #F5F6F8;
   --shadow-sm: 0 1px 2px rgba(38, 54, 77, 0.05);
   --shadow-md: 0 4px 12px rgba(38, 54, 77, 0.08);
@@ -154,7 +154,7 @@ a[href="#cadastro-material"] {
   border: 1px solid var(--primary);
   border-radius: 12px;
   background-color: var(--primary);
-  color: #FFFFFF;
+  color: var(--card);
   font-family: inherit;
   font-size: 1rem;
   font-weight: 600;
@@ -241,7 +241,7 @@ a[href="#cadastro-material"]:focus-visible {
 
 .btn--primario {
   background-color: var(--primary);
-  color: #FFFFFF;
+  color: var(--card);
   min-height: 52px;
   padding: 14px 24px;
 }
@@ -323,7 +323,7 @@ nav a[data-rota]:hover {
 
 nav a[data-rota][aria-current="page"] {
   background-color: var(--primary);
-  color: #FFFFFF;
+  color: var(--card);
 }
 
 .nav-logout {
@@ -610,11 +610,11 @@ nav a[data-rota][aria-current="page"] {
 }
 
 .icone-movimentacao.receita {
-  color: #059669;
+  color: #27856B;
 }
 
 .icone-movimentacao.despesa {
-  color: #DC2626;
+  color: var(--error-text);
 }
 
 .item-movimentacao .info-principal {
@@ -650,11 +650,11 @@ nav a[data-rota][aria-current="page"] {
 }
 
 .item-movimentacao .valor.receita {
-  color: #059669;
+  color: #27856B;
 }
 
 .item-movimentacao .valor.despesa {
-  color: #DC2626;
+  color: var(--error-text);
 }
 
 .item-movimentacao .acoes {
@@ -1176,15 +1176,15 @@ nav a[data-rota][aria-current="page"] {
 }
 
 .btn-tipo[data-tipo="entrada"].ativo {
-  border-color: #059669;
-  background: #059669;
-  color: #fff;
+  border-color: #27856B;
+  background: #27856B;
+  color: var(--card);
 }
 
 .btn-tipo[data-tipo="saida"].ativo {
-  border-color: #DC2626;
-  background: #DC2626;
-  color: #fff;
+  border-color: var(--error-text);
+  background: var(--error-text);
+  color: var(--card);
 }
 
 /* Ações do formulário */
