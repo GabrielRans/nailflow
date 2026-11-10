@@ -124,7 +124,6 @@ function renderizarMovimentacoes(movimentacoes) {
   movimentacoes.forEach((movimentacao) => {
     const item = document.createElement("li");
     const ehReceita = movimentacao.tipo === "entrada";
-    // Adiciona a classe item-movimentacao conforme wireframe F02
     item.className = `item-movimentacao ${ehReceita ? "receita" : "despesa"}`;
 
     // Ícone circular da movimentação (seta para cima/baixo)
@@ -137,7 +136,7 @@ function renderizarMovimentacoes(movimentacoes) {
     const infoPrincipal = document.createElement("div");
     infoPrincipal.className = "info-principal";
 
-    const descricao = document.createElement("span");
+    const descricao = document.createElement("strong");
     descricao.className = "descricao";
     descricao.textContent = movimentacao.descricao;
 
@@ -146,6 +145,10 @@ function renderizarMovimentacoes(movimentacoes) {
     detalhes.textContent = `${movimentacao.categoria} • ${movimentacao.data}`;
 
     infoPrincipal.append(descricao, detalhes);
+
+    // Lado direito: Valor + Ações (estrutura conforme wireframe)
+    const direitaCard = document.createElement("div");
+    direitaCard.className = "direita-card";
 
     // Valor
     const valor = document.createElement("strong");
@@ -248,7 +251,8 @@ function renderizarMovimentacoes(movimentacoes) {
     });
 
     acoes.append(botaoEditar, botaoExcluir);
-    item.append(icone, infoPrincipal, valor, acoes);
+    direitaCard.append(valor, acoes);
+    item.append(icone, infoPrincipal, direitaCard);
 
     listaMovimentacoes.append(item);
   });

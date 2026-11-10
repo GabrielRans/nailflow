@@ -23,7 +23,6 @@
     <script src="./js/navegacao.js" defer></script>
   </head>
   <body>
-      <h1>NailFlow</h1>
 
       <!-- Tela de Login (visível quando sem sessão) -->
       <section
@@ -130,10 +129,15 @@
 
       <!-- Container do App Logado (oculto até autenticar) -->
       <div id="app-logado" hidden>
-        <nav aria-label="Navegação principal">
-          <a href="#dashboard" data-rota="dashboard">Dashboard</a>
-          <a href="#financeiro" data-rota="financeiro">Financeiro</a>
-          <a href="#materiais" data-rota="materiais">Materiais</a>
+        <header class="app-header-topo">
+          <h1>NailFlow</h1>
+
+          <nav aria-label="Navegação principal">
+            <a href="#dashboard" data-rota="dashboard">Dashboard</a>
+            <a href="#financeiro" data-rota="financeiro">Financeiro</a>
+            <a href="#materiais" data-rota="materiais">Materiais</a>
+          </nav>
+
           <button
             type="button"
             id="btn-logout"
@@ -143,7 +147,7 @@
           >
             Sair
           </button>
-        </nav>
+        </header>
 
         <main>
         <section
@@ -153,8 +157,13 @@
           hidden
         >
           <header class="page-header">
-            <h2>Visão geral</h2>
-            <p>Resumo financeiro do período atual</p>
+            <div class="header-texto">
+              <h2>Visão geral</h2>
+              <p>Resumo financeiro do período atual</p>
+            </div>
+            <div class="container-acao">
+              <a href="#nova-movimentacao" class="btn btn--primario">+ Nova movimentação</a>
+            </div>
           </header>
 
           <!-- Grid de Indicadores -->
@@ -187,11 +196,6 @@
                 <strong class="valor" data-indicador="ticketMedio">R$ 0,00</strong>
               </div>
             </div>
-          </div>
-
-          <!-- Botão Centralizado -->
-          <div class="container-acao">
-            <a href="#nova-movimentacao" class="btn btn--primario">+ Nova movimentação</a>
           </div>
 
           <!-- Alerta de Materiais -->
@@ -482,5 +486,21 @@
           </form>
         </div>
       </section>
-  </body>
+
+  <!-- Bottom Navigation (Mobile) -->
+  <nav class="bottom-nav" aria-label="Navegação inferior mobile">
+    <a href="#dashboard" data-rota="dashboard" class="nav-item">
+      <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+      <span>Dashboard</span>
+    </a>
+    <a href="#financeiro" data-rota="financeiro" class="nav-item">
+      <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"></path><path d="M22 12A10 10 0 0 0 12 2v10z"></path></svg>
+      <span>Financeiro</span>
+    </a>
+    <a href="#materiais" data-rota="materiais" class="nav-item">
+      <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+      <span>Materiais</span>
+    </a>
+  </nav>
+</body>
 </html>
