@@ -80,11 +80,22 @@ function alternarVisibilidadeApp(autenticado, emRedefinicaoSenha = false) {
   const telaLogin = document.getElementById("tela-login");
   const telaRedefinirSenha = document.getElementById("tela-redefinir-senha");
   const btnLogout = document.getElementById("btn-logout");
+  const headerTopo = document.querySelector('.app-header-topo');
+  const bottomNav = document.querySelector('.bottom-nav');
 
   if (appLogado) appLogado.hidden = !autenticado || emRedefinicaoSenha;
   if (telaLogin) telaLogin.hidden = autenticado || emRedefinicaoSenha;
   if (telaRedefinirSenha) telaRedefinirSenha.hidden = !emRedefinicaoSenha;
   if (btnLogout) btnLogout.hidden = !autenticado || emRedefinicaoSenha;
+
+  // Controla visibilidade do header topo e bottom nav
+  if (autenticado && !emRedefinicaoSenha) {
+    if (headerTopo) headerTopo.style.display = 'flex';
+    if (bottomNav) bottomNav.style.display = 'flex';
+  } else {
+    if (headerTopo) headerTopo.style.display = 'none';
+    if (bottomNav) bottomNav.style.display = 'none';
+  }
 }
 
 /**

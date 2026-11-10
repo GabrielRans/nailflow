@@ -20,8 +20,8 @@ console.log("materiais.js carregado");
  * Material: { id, nome, quantidadeDisponivel, unidade, quantidadeMinima }
  */
 
-// Cache do repositório Supabase
-let repoSupabase = null;
+// Cache do repositório Supabase (materiais)
+let repoSupabaseMateriais = null;
 let inicializacaoPromise = null;
 
 /**
@@ -44,7 +44,7 @@ async function carregarRepoMateriais() {
  * @returns {Promise<Object>}
  */
 async function obterRepositorio() {
-  if (repoSupabase) return repoSupabase;
+  if (repoSupabaseMateriais) return repoSupabaseMateriais;
 
   // Se já está inicializando, aguarda
   if (inicializacaoPromise) {
@@ -63,7 +63,7 @@ async function obterRepositorio() {
       if (!repo) {
         throw new Error('Falha ao criar repositório Supabase: usuário não autenticado/autorizado ou erro de configuração');
       }
-      repoSupabase = repo;
+      repoSupabaseMateriais = repo;
       return repo;
     })
     .catch(err => {
@@ -80,7 +80,7 @@ async function obterRepositorio() {
  * Não faz fallback silencioso - erros propagam para a UI
  */
 async function reinicializarMateriaisRepository() {
-  repoSupabase = null;
+  repoSupabaseMateriais = null;
   inicializacaoPromise = null;
   return await obterRepositorio();
 }

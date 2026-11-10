@@ -99,13 +99,27 @@ function setCarregando(mostrar) {
 }
 
 /**
+ * Ordena movimentações por data decrescente, depois por ID para desempate
+ * @param {Array} movs
+ * @returns {Array} Novo array ordenado (não muta o original)
+ */
+function ordenarMovimentacoes(movs) {
+  return [...movs].sort((a, b) => {
+    if (b.data !== a.data) return b.data.localeCompare(a.data);
+    return b.id.localeCompare(a.id);
+  });
+}
+
+/**
  * Renderiza na interface as movimentações recebidas.
  * @param {Array} movimentacoes
  */
 function renderizarMovimentacoes(movimentacoes) {
+  // Garante ordenação: mais recentes primeiro (data desc, depois ID desc)
+  const movsOrdenadas = ordenarMovimentacoes(movimentacoes);
   listaMovimentacoes.replaceChildren();
 
-  if (movimentacoes.length === 0) {
+  if (movsOrdenadas.length === 0) {
     const itemVazio = document.createElement("div");
     itemVazio.className = "movimentacoes-vazio";
     itemVazio.setAttribute("role", "status");
@@ -121,10 +135,9 @@ function renderizarMovimentacoes(movimentacoes) {
     return;
   }
 
-  movimentacoes.forEach((movimentacao) => {
+  movsOrdenadas.forEach((movimentacao) => {
     const item = document.createElement("li");
     const ehReceita = movimentacao.tipo === "entrada";
-    // Adiciona a classe item-movimentacao conforme wireframe F02
     item.className = `item-movimentacao ${ehReceita ? "receita" : "despesa"}`;
 
     // Ícone circular da movimentação (seta para cima/baixo)
@@ -137,7 +150,7 @@ function renderizarMovimentacoes(movimentacoes) {
     const infoPrincipal = document.createElement("div");
     infoPrincipal.className = "info-principal";
 
-    const descricao = document.createElement("span");
+    const descricao = document.createElement("strong");
     descricao.className = "descricao";
     descricao.textContent = movimentacao.descricao;
 
@@ -146,6 +159,10 @@ function renderizarMovimentacoes(movimentacoes) {
     detalhes.textContent = `${movimentacao.categoria} • ${movimentacao.data}`;
 
     infoPrincipal.append(descricao, detalhes);
+
+    // Lado direito: Valor + Ações (estrutura conforme wireframe)
+    const direitaCard = document.createElement("div");
+    direitaCard.className = "direita-card";
 
     // Valor
     const valor = document.createElement("strong");
@@ -248,7 +265,8 @@ function renderizarMovimentacoes(movimentacoes) {
     });
 
     acoes.append(botaoEditar, botaoExcluir);
-    item.append(icone, infoPrincipal, valor, acoes);
+    direitaCard.append(valor, acoes);
+    item.append(icone, infoPrincipal, direitaCard);
 
     listaMovimentacoes.append(item);
   });
