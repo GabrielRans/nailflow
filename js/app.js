@@ -465,35 +465,52 @@ function configurarFormularioMovimentacao() {
   formulario.addEventListener("submit", async function (event) {
     event.preventDefault();
 
-    const dadosFormulario = new FormData(formulario);
-    const idMovimentacao = dadosFormulario.get("id");
+    try {
+      const dadosFormulario = new FormData(formulario);
+      const idMovimentacao = dadosFormulario.get("id");
 
-    const movimentacao = {
-      tipo: dadosFormulario.get("tipo"),
-      valor: Number(dadosFormulario.get("valor")),
-      descricao: dadosFormulario.get("descricao"),
-      categoria: dadosFormulario.get("categoria"),
-      data: dadosFormulario.get("data"),
-      observacao: dadosFormulario.get("observacao")
-    };
-
-    let ok;
-
-    if (idMovimentacao) {
-      ok = await atualizarMovimentacaoAsync(idMovimentacao, movimentacao);
-    } else {
-      const novaMovimentacao = {
-        ...movimentacao,
-        id: crypto.randomUUID()
+      const movimentacao = {
+        tipo: dadosFormulario.get("tipo"),
+        valor: Number(dadosFormulario.get("valor")),
+        descricao: dadosFormulario.get("descricao"),
+        categoria: dadosFormulario.get("categoria"),
+        data: dadosFormulario.get("data"),
+        observacao: dadosFormulario.get("observacao")
       };
-      ok = await adicionarMovimentacaoAsync(novaMovimentacao);
-    }
 
-    if (ok) {
-      formulario.reset();
-      // Limpa campo hidden id
-      const campoId = formulario.querySelector("#movimentacao-id");
-      if (campoId) campoId.value = "";
+      let ok;
+
+      if (idMovimentacao) {
+        ok = await atualizarMovimentacaoAsync(idMovimentacao, movimentacao);
+      } else {
+        const novaMovimentacao = {
+          ...movimentacao,
+          id: crypto.randomUUID()
+        };
+        ok = await adicionarMovimentacaoAsync(novaMovimentacao);
+      }
+
+      if (ok) {
+        if (typeof mostrarToast === 'function') {
+          mostrarToast("Movimentação salva com sucesso!", "sucesso");
+        }
+        formulario.reset();
+        // Limpa campo hidden id
+        const campoId = formulario.querySelector("#movimentacao-id");
+        if (campoId) campoId.value = "";
+        // Volta para a tela financeiro
+        window.location.hash = "#financeiro";
+      } else {
+        console.error("Erro real ao salvar:", { ok, idMovimentacao, movimentacao });
+        if (typeof mostrarToast === 'function') {
+          mostrarToast("Erro ao salvar. Tente novamente.", "erro");
+        }
+      }
+    } catch (err) {
+      console.error("Erro real ao salvar (exception):", err);
+      if (typeof mostrarToast === 'function') {
+        mostrarToast("Erro ao salvar. Tente novamente.", "erro");
+      }
     }
   });
 }
