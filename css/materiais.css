@@ -1,0 +1,419 @@
+/* =============================================================================
+   MÓDULO DE MATERIAIS — TELAS F04 e F05
+   Identidade visual: Modelo B (Mobile-first)
+   ============================================================================= */
+
+/* -----------------------------------------------------------------------------
+   Feedback e Mensagens Globais de Materiais
+   ----------------------------------------------------------------------------- */
+.materiais-feedback {
+  margin: 0 0 16px;
+  padding: 12px 16px;
+  border-radius: var(--radius-md, 12px);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  line-height: 1.4;
+  transition: opacity var(--transition, 160ms ease);
+}
+
+.materiais-feedback--sucesso {
+  background-color: #F0FDF4;
+  border: 1px solid #86EFAC;
+  color: #166534;
+}
+
+[data-theme="dark"] .materiais-feedback--sucesso {
+  background-color: #143521;
+  border-color: #1E6B39;
+  color: #86EFAC;
+}
+
+.materiais-feedback--erro {
+  background-color: #FEF2F2;
+  border: 1px solid #FECACA;
+  color: #991B1B;
+}
+
+[data-theme="dark"] .materiais-feedback--erro {
+  background-color: #3D1A1A;
+  border-color: #7A2E2E;
+  color: #FCA5A5;
+}
+
+/* -----------------------------------------------------------------------------
+   Estado de Carregamento
+   ----------------------------------------------------------------------------- */
+.materiais-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 32px 16px;
+  color: var(--text-secondary, #667085);
+  font-size: 0.9375rem;
+  font-weight: 500;
+}
+
+.materiais-loading .spinner {
+  animation: girar 1s linear infinite;
+}
+
+@keyframes girar {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .materiais-loading .spinner {
+    animation: none;
+  }
+}
+
+/* -----------------------------------------------------------------------------
+   Estado Vazio (F04)
+   ----------------------------------------------------------------------------- */
+.materiais-vazio {
+  text-align: center;
+  padding: 36px 20px;
+  margin: 16px 0 24px;
+  border: 2px dashed var(--border, #E1E5EA);
+  border-radius: var(--radius-md, 12px);
+  background-color: var(--card, #FFFFFF);
+  box-shadow: var(--shadow-sm, 0 1px 2px rgba(0, 0, 0, 0.05));
+}
+
+.materiais-vazio__titulo {
+  margin: 0 0 8px;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--text-primary, #26364D);
+}
+
+.materiais-vazio__descricao {
+  margin: 0;
+  font-size: 0.9375rem;
+  color: var(--text-secondary, #667085);
+  line-height: 1.5;
+}
+
+/* -----------------------------------------------------------------------------
+   Listagem de Materiais (F04)
+   ----------------------------------------------------------------------------- */
+.lista-materiais {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+  margin: 16px 0 24px;
+  padding: 0;
+  list-style: none;
+}
+
+.material-card {
+  padding: 18px 16px;
+  border: 1px solid var(--border, #E1E5EA);
+  border-radius: var(--radius-md, 12px);
+  background-color: var(--card, #FFFFFF);
+  box-shadow: var(--shadow-sm, 0 1px 2px rgba(0, 0, 0, 0.05));
+  transition: border-color var(--transition, 160ms ease), box-shadow var(--transition, 160ms ease);
+}
+
+.material-card:hover {
+  box-shadow: var(--shadow-md, 0 4px 12px rgba(0, 0, 0, 0.08));
+}
+
+.material-card--alerta-reposicao {
+  border-left: 5px solid #DC2626;
+}
+
+.material-card__cabecalho {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.material-card__nome {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--text-primary, #26364D);
+  line-height: 1.3;
+  word-break: break-word;
+}
+
+/* Badge de Alerta de Reposição (Issue #8) */
+.badge-reposicao {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  background-color: #FEF2F2;
+  border: 1px solid #FECACA;
+  color: #991B1B;
+}
+
+[data-theme="dark"] .badge-reposicao {
+  background-color: #3D1A1A;
+  border-color: #7A2E2E;
+  color: #FCA5A5;
+}
+
+/* Grade de Indicadores do Material */
+.material-card__metricas {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  padding: 12px;
+  margin-bottom: 16px;
+  border-radius: var(--radius-sm, 8px);
+  background-color: var(--bg, #F5F6F8);
+}
+
+.material-card__metrica {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.material-card__metrica-rotulo {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-secondary, #667085);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.material-card__metrica-valor {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--text-primary, #26364D);
+  font-variant-numeric: tabular-nums;
+}
+
+.material-card__metrica-valor--alerta {
+  color: #DC2626;
+}
+
+[data-theme="dark"] .material-card__metrica-valor--alerta {
+  color: #F87171;
+}
+
+/* Controle de Atualização Rápida de Estoque (F04) */
+.material-card__ajuste {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border, #E1E5EA);
+}
+
+.material-card__ajuste-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-primary, #26364D);
+  margin-right: auto;
+}
+
+.material-card__ajuste-campo {
+  width: 72px;
+  min-height: 44px;
+  padding: 8px;
+  border: 1px solid #667085;
+  border-radius: var(--radius-md, 12px);
+  background-color: var(--card, #FFFFFF);
+  color: var(--text-primary, #26364D);
+  font-family: inherit;
+  font-size: 1rem;
+  text-align: center;
+  box-sizing: border-box;
+}
+
+.material-card__ajuste-campo:focus-visible {
+  border-color: var(--border-focus, #7C435C);
+  outline: 3px solid var(--focus, #7C435C);
+  outline-offset: 2px;
+}
+
+.material-card__btn-atualizar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  min-width: 44px;
+  padding: 8px 16px;
+  border: 1px solid var(--primary, #7C435C);
+  border-radius: var(--radius-md, 12px);
+  background-color: var(--primary, #7C435C);
+  color: #FFFFFF;
+  font-family: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  box-sizing: border-box;
+  transition: background-color var(--transition, 160ms ease), border-color var(--transition, 160ms ease);
+}
+
+.material-card__btn-atualizar:hover:not(:disabled) {
+  background-color: var(--primary-hover, #63344A);
+  border-color: var(--primary-hover, #63344A);
+}
+
+.material-card__btn-atualizar:focus-visible {
+  outline: 3px solid var(--focus, #7C435C);
+  outline-offset: 2px;
+}
+
+.material-card__btn-atualizar:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* -----------------------------------------------------------------------------
+   Formulário de Cadastro de Materiais (F05)
+   ----------------------------------------------------------------------------- */
+.form-material {
+  display: grid;
+  gap: 16px;
+  margin-top: 16px;
+  padding: 20px;
+  border: 1px solid var(--border, #E1E5EA);
+  border-radius: var(--radius-md, 12px);
+  background-color: var(--card, #FFFFFF);
+  box-shadow: var(--shadow-sm, 0 1px 2px rgba(0, 0, 0, 0.05));
+}
+
+.form-material .form-group {
+  display: grid;
+  gap: 6px;
+}
+
+.form-material label {
+  color: var(--text-primary, #26364D);
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.form-material input,
+.form-material select {
+  width: 100%;
+  min-height: 48px;
+  padding: 11px 13px;
+  border: 1px solid #667085;
+  border-radius: var(--radius-md, 12px);
+  background-color: var(--card, #FFFFFF);
+  color: var(--text-primary, #26364D);
+  font-family: inherit;
+  font-size: 1rem;
+  line-height: 1.25;
+  box-sizing: border-box;
+  transition: border-color var(--transition, 160ms ease), box-shadow var(--transition, 160ms ease);
+}
+
+.form-material input:focus-visible,
+.form-material select:focus-visible {
+  border-color: var(--border-focus, #7C435C);
+  outline: 3px solid var(--focus, #7C435C);
+  outline-offset: 2px;
+}
+
+.form-material input[aria-invalid="true"],
+.form-material select[aria-invalid="true"] {
+  border-color: #DC2626;
+}
+
+.form-material .form-erro-campo {
+  margin: 2px 0 0;
+  color: #DC2626;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  line-height: 1.3;
+}
+
+[data-theme="dark"] .form-material .form-erro-campo {
+  color: #F87171;
+}
+
+.form-material .btn-submit-material {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 48px;
+  padding: 12px 20px;
+  margin-top: 8px;
+  border: 1px solid var(--primary, #7C435C);
+  border-radius: var(--radius-md, 12px);
+  background-color: var(--primary, #7C435C);
+  color: #FFFFFF;
+  font-family: inherit;
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.25;
+  cursor: pointer;
+  box-sizing: border-box;
+  transition: background-color var(--transition, 160ms ease), border-color var(--transition, 160ms ease);
+}
+
+.form-material .btn-submit-material:hover:not(:disabled) {
+  background-color: var(--primary-hover, #63344A);
+  border-color: var(--primary-hover, #63344A);
+}
+
+.form-material .btn-submit-material:focus-visible {
+  outline: 3px solid var(--focus, #7C435C);
+  outline-offset: 2px;
+}
+
+.form-material .btn-submit-material:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Responsividade Tablet e Desktop (≥ 600px) */
+@media (min-width: 600px) {
+  .lista-materiais {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .form-material {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px 20px;
+  }
+
+  .form-material .form-group--full {
+    grid-column: 1 / -1;
+  }
+
+  .form-material .btn-submit-material {
+    grid-column: 1 / -1;
+  }
+}
+
+/* Ajuste específico para telas muito estreitas (≤ 360px) */
+@media (max-width: 360px) {
+  .material-card__ajuste-label {
+    width: 100%;
+    margin-bottom: 4px;
+  }
+
+  .material-card__ajuste-campo {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .material-card__btn-atualizar {
+    flex: 1;
+    min-width: 0;
+  }
+}
