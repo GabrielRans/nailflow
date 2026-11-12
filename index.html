@@ -202,13 +202,19 @@
           </div>
 
           <!-- Alerta de Materiais -->
-          <div class="card-alerta">
-            <div class="icone-alerta">!</div>
+          <a
+            href="#materiais"
+            id="alerta-reposicao"
+            class="card-alerta"
+            hidden
+            aria-label="Ver materiais que precisam de reposição"
+          >
+            <div class="icone-alerta" aria-hidden="true">!</div>
             <div class="texto-alerta">
               <strong>Materiais</strong>
-              <span>2 itens precisam de reposição</span>
+              <span id="alerta-reposicao-texto"></span>
             </div>
-          </div>
+          </a>
 
           <!-- Últimas movimentações -->
           <div class="lista-header">
