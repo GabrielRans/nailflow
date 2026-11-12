@@ -43,7 +43,7 @@ async function carregarRepoMateriais() {
  * Não faz fallback silencioso - erros de autenticação/autorização propagam para a UI
  * @returns {Promise<Object>}
  */
-async function obterRepositorio() {
+async function obterRepositorioMateriais() {
   if (repoSupabaseMateriais) return repoSupabaseMateriais;
 
   // Se já está inicializando, aguarda
@@ -82,7 +82,7 @@ async function obterRepositorio() {
 async function reinicializarMateriaisRepository() {
   repoSupabaseMateriais = null;
   inicializacaoPromiseMateriais = null;
-  return await obterRepositorio();
+  return await obterRepositorioMateriais();
 }
 
 function validarMaterial(dados) {
@@ -171,7 +171,7 @@ async function adicionarMaterial(dados, repositorio) {
         ...validacao.dados
     };
     try {
-        const repo = repositorio || await obterRepositorio();
+        const repo = repositorio || await obterRepositorioMateriais();
         if (!repo) {
             return {
                 sucesso: false,
@@ -204,7 +204,7 @@ async function adicionarMaterial(dados, repositorio) {
 
 async function listarMateriais(repositorio) {
     try {
-        const repo = repositorio || await obterRepositorio();
+        const repo = repositorio || await obterRepositorioMateriais();
         if (!repo) {
             return {
                 sucesso: false,
@@ -266,7 +266,7 @@ async function atualizarQuantidadeMaterial(id, quantidade, repositorio) {
     }
 
     try {
-        const repo = repositorio || await obterRepositorio();
+        const repo = repositorio || await obterRepositorioMateriais();
         if (!repo) {
             return {
                 sucesso: false,
@@ -328,7 +328,7 @@ async function buscarMaterialPorId(id, repositorio) {
     const idNormalizado = id.trim();
 
     try {
-        const repo = repositorio || await obterRepositorio();
+        const repo = repositorio || await obterRepositorioMateriais();
         if (!repo) {
             return {
                 sucesso: false,
@@ -390,7 +390,7 @@ async function buscarMaterialPorIdAsync(id) {
 
 async function atualizarMaterialAsync(id, dados) {
     try {
-        const repo = await obterRepositorio();
+        const repo = await obterRepositorioMateriais();
         if (!repo) {
             return { sucesso: false, erro: { codigo: "NAO_AUTENTICADO", mensagem: "Faça login para atualizar materiais." } };
         }
@@ -406,7 +406,7 @@ async function atualizarMaterialAsync(id, dados) {
 
 async function excluirMaterialAsync(id) {
     try {
-        const repo = await obterRepositorio();
+        const repo = await obterRepositorioMateriais();
         if (!repo) {
             return { sucesso: false, erro: { codigo: "NAO_AUTENTICADO", mensagem: "Faça login para excluir materiais." } };
         }

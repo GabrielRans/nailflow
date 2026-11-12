@@ -128,7 +128,7 @@ async function reinicializarRepositorio() {
   repoSupabase = null;
   inicializacaoPromise = null;
   movimentacoes = [];
-  return await obterRepositorio();
+  return await obterRepositorioFinanceiro();
 }
 
 /**
@@ -179,11 +179,11 @@ async function inicializarFinanceiro() {
 }
 
 /**
- * Obtém o repositório ativo (inicializa Supabase se necessário)
+ * Obtém o repositório financeiro ativo (inicializa Supabase se necessário)
  * Inicialização preguiçosa (lazy) - só inicializa na primeira chamada da API assíncrona
  * @returns {Promise<Object>} Repositório ativo
  */
-async function obterRepositorio() {
+async function obterRepositorioFinanceiro() {
   // Se já tem repositório de memória (testes), usa ele
   if (repositorioAtivo === 'memory' && repoMemory) {
     return repoMemory;
@@ -222,7 +222,7 @@ function dispararAtualizacao(lista) {
 async function adicionarMovimentacaoAsync(movimentacao) {
   if (!validarMovimentacao(movimentacao)) return false;
   try {
-    const repo = await obterRepositorio();
+    const repo = await obterRepositorioFinanceiro();
     await repo.adicionar(movimentacao);
     movimentacoes = await repo.listar();
     dispararAtualizacao(movimentacoes);
@@ -238,7 +238,7 @@ async function adicionarMovimentacaoAsync(movimentacao) {
  * @returns {Promise<Array>}
  */
 async function listarMovimentacoesAsync() {
-  const repo = await obterRepositorio();
+  const repo = await obterRepositorioFinanceiro();
   movimentacoes = await repo.listar();
   return [...movimentacoes];
 }
@@ -249,7 +249,7 @@ async function listarMovimentacoesAsync() {
  * @returns {Promise<Object|null>}
  */
 async function buscarMovimentacaoPorIdAsync(id) {
-  const repo = await obterRepositorio();
+  const repo = await obterRepositorioFinanceiro();
   return await repo.buscarPorId(id);
 }
 
@@ -261,7 +261,7 @@ async function buscarMovimentacaoPorIdAsync(id) {
  */
 async function atualizarMovimentacaoAsync(id, dadosAtualizados) {
   try {
-    const repo = await obterRepositorio();
+    const repo = await obterRepositorioFinanceiro();
     const ok = await repo.atualizar(id, dadosAtualizados);
     if (ok) {
       movimentacoes = await repo.listar();
@@ -281,7 +281,7 @@ async function atualizarMovimentacaoAsync(id, dadosAtualizados) {
  */
 async function excluirMovimentacaoAsync(id) {
   try {
-    const repo = await obterRepositorio();
+    const repo = await obterRepositorioFinanceiro();
     const ok = await repo.excluir(id);
     if (ok) {
       movimentacoes = await repo.listar();
@@ -301,7 +301,7 @@ async function excluirMovimentacaoAsync(id) {
  * @returns {Promise<Array>}
  */
 async function filtrarMovimentacoesPorPeriodoAsync(dataInicial, dataFinal) {
-  const repo = await obterRepositorio();
+  const repo = await obterRepositorioFinanceiro();
   return await repo.filtrarPorPeriodo(dataInicial, dataFinal);
 }
 
