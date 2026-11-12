@@ -61,7 +61,7 @@ function criarRepositorioMemoria() {
 async function carregarRepoSupabase() {
   try {
     const modulo = await import('./repositories/financeiro-repo.js');
-    return modulo.tentarCriarFinanceiroRepository();
+    return modulo.tentarCriarFinanceiroRepository;
   } catch (erro) {
     console.error('[Erro] Falha ao carregar o repositório Supabase:', erro);
     return null;
@@ -267,7 +267,7 @@ async function atualizarMovimentacaoAsync(id, dadosAtualizados) {
       movimentacoes = await repo.listar();
       dispararAtualizacao(movimentacoes);
     }
-    return ok;
+    return Boolean(ok);
   } catch (err) {
     console.error('[Financeiro] Erro ao atualizar:', err);
     return false;
@@ -287,7 +287,7 @@ async function excluirMovimentacaoAsync(id) {
       movimentacoes = await repo.listar();
       dispararAtualizacao(movimentacoes);
     }
-    return ok;
+    return Boolean(ok);
   } catch (err) {
     console.error('[Financeiro] Erro ao excluir:', err);
     return false;

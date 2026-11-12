@@ -117,11 +117,12 @@ window.addEventListener('auth:logout', () => {
 
 /**
  * Formata data para exibição
- * @param {string} data - Data no formato YYYY-MM-DD
+ * @param {string} data - Data no formato YYYY-MM-DD ou ISO com hora
  * @returns {string} Data formatada DD/MM
  */
 function formatarDataCurta(data) {
-  const [ano, mes, dia] = data.split('-');
+  if (!data) return '--/--';
+  const [, mes, dia] = String(data).split('T')[0].split('-');
   return `${dia}/${mes}`;
 }
 
@@ -137,8 +138,9 @@ async function carregarUltimasMovimentacoes() {
 
     // Ordena por data decrescente, depois por ID para desempate
     movs.sort((a, b) => {
-      if (b.data !== a.data) return b.data.localeCompare(a.data);
-      return b.id.localeCompare(a.id);
+      const da = a.data ?? '', db = b.data ?? '';
+      if (db !== da) return db.localeCompare(da);
+      return String(b.id).localeCompare(String(a.id));
     });
 
     // Pega apenas as 5 primeiras
