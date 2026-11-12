@@ -51,14 +51,12 @@ function rowParaMaterial(row) {
  * Converte objeto de domínio para linha do banco
  * @param {Object} material
  * @param {string} estudioId
- * @param {string} userId
  * @returns {Object}
  */
-function materialParaRow(material, estudioId, userId) {
+function materialParaRow(material, estudioId) {
   return {
     id: material.id,
     estudio_id: estudioId,
-    usuario_id: userId,
     nome: material.nome,
     quantidade_disponivel: material.quantidadeDisponivel,
     unidade: material.unidade,
@@ -71,7 +69,7 @@ function materialParaRow(material, estudioId, userId) {
  * @returns {Object} Repositório com métodos assíncronos
  */
 export async function criarMateriaisRepository() {
-  const { estudioId, userId } = await obterEstudioIdEUsuário();
+  const { estudioId } = await obterEstudioIdEUsuário();
   if (!estudioId) {
     throw new Error('Usuário não autenticado ou sem estúdio vinculado');
   }
@@ -83,7 +81,7 @@ export async function criarMateriaisRepository() {
      * @returns {Promise<void>}
      */
     async salvar(material) {
-      const row = materialParaRow(material, estudioId, userId);
+      const row = materialParaRow(material, estudioId);
 
       const { error } = await supabase
         .from(TABELA)
@@ -157,7 +155,7 @@ export async function criarMateriaisRepository() {
      * @returns {Promise<Object>} Material criado
      */
     async adicionar(material) {
-      const row = materialParaRow(material, estudioId, userId);
+      const row = materialParaRow(material, estudioId);
 
       const { data, error } = await supabase
         .from(TABELA)

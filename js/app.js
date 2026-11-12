@@ -144,6 +144,41 @@ function _setRepositorioParaTeste(repo) {
 }
 
 /**
+ * Inicializa o repositório financeiro (Supabase) de forma explícita
+ * Deve ser chamado após autenticação/autorização estar pronta
+ * @returns {Promise<Object>} Repositório Supabase inicializado
+ */
+async function inicializarFinanceiro() {
+  // Se já tem repositório Supabase válido, retorna ele
+  if (repositorioAtivo === 'supabase' && repoSupabase) {
+    return repoSupabase;
+  }
+
+  // Se já está inicializando, aguarda a inicialização existente
+  if (inicializacaoPromise) {
+    return await inicializacaoPromise;
+  }
+
+  // Inicializa Supabase
+  inicializacaoPromise = inicializarRepositorioSupabase()
+    .then(repo => {
+      // Sucesso: repositório pronto
+      return repo;
+    })
+    .catch(err => {
+      // Falha: limpa estado para permitir retry
+      console.error('[Financeiro] Falha ao inicializar Supabase:', err.message);
+      inicializacaoPromise = null;
+      repoSupabase = null;
+      repositorioAtivo = null;
+      throw err;
+    });
+
+  return await inicializacaoPromise;
+}
+
+/**
+ * Obtém o repositório ativo (inicializa Supabase se necessário)
  * Inicialização preguiçosa (lazy) - só inicializa na primeira chamada da API assíncrona
  * @returns {Promise<Object>} Repositório ativo
  */
@@ -158,19 +193,8 @@ async function obterRepositorio() {
     return repoSupabase;
   }
 
-  // Se já está inicializando, aguarda
-  if (inicializacaoPromise) {
-    return await inicializacaoPromise;
-  }
-
   // Inicializa Supabase (apenas na primeira chamada)
-  inicializacaoPromise = inicializarRepositorioSupabase().catch(err => {
-    console.error('[Financeiro] Falha ao inicializar Supabase:', err.message);
-    inicializacaoPromise = null; // Permite retry
-    throw err;
-  });
-
-  return await inicializacaoPromise;
+  return await inicializarFinanceiro();
 }
 
 // =============================================================================
@@ -556,6 +580,7 @@ const apiFinanceiro = {
   validarMovimentacao,
   calcularIndicadoresFinanceiros,
   reinicializarRepositorio,
+  inicializarFinanceiro,
 
   // Internos (para testes)
   _getCache: () => movimentacoes,
