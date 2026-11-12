@@ -61,8 +61,9 @@ function criarRepositorioMemoria() {
 async function carregarRepoSupabase() {
   try {
     const modulo = await import('./repositories/financeiro-repo.js');
-    return modulo.tentarCriarFinanceiroRepository;
-  } catch {
+    return modulo.tentarCriarFinanceiroRepository();
+  } catch (erro) {
+    console.error('[Erro] Falha ao carregar o repositório Supabase:', erro);
     return null;
   }
 }
