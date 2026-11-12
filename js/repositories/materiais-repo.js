@@ -42,8 +42,8 @@ function rowParaMaterial(row) {
     quantidadeMinima: Number(row.quantidade_minima),
     estudio_id: row.estudio_id,
     usuario_id: row.usuario_id,
-    created_at: row.created_at,
-    updated_at: row.updated_at
+    criado_em: row.criado_em,
+    atualizado_em: row.atualizado_em
   };
 }
 
@@ -135,7 +135,8 @@ export async function criarMateriaisRepository() {
       const { data, error } = await supabase
         .from(TABELA)
         .update({
-          quantidade_disponivel: quantidade
+          quantidade_disponivel: quantidade,
+          atualizado_em: new Date().toISOString()
         })
         .eq('estudio_id', estudioId)
         .eq('id', id)
@@ -178,7 +179,8 @@ export async function criarMateriaisRepository() {
         nome: dadosAtualizados.nome,
         quantidade_disponivel: dadosAtualizados.quantidadeDisponivel,
         unidade: dadosAtualizados.unidade,
-        quantidade_minima: dadosAtualizados.quantidadeMinima
+        quantidade_minima: dadosAtualizados.quantidadeMinima,
+        atualizado_em: new Date().toISOString()
       };
 
       const { error, count } = await supabase
@@ -198,15 +200,15 @@ export async function criarMateriaisRepository() {
      * @returns {Promise<boolean>}
      */
     async excluir(id) {
-      const { error, count } = await supabase
+      const { data, error } = await supabase
         .from(TABELA)
         .delete()
         .eq('estudio_id', estudioId)
         .eq('id', id)
-        .select('id', { count: 'exact', head: true });
+        .select('id');
 
       if (error) throw error;
-      return count > 0;
+      return (data?.length ?? 0) > 0;
     }
   };
 }
