@@ -373,7 +373,7 @@ nav a[data-rota][aria-current="page"] {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 16px;
-  margin-bottom: 24px;
+  margin-bottom: 16px; /* Espaçamento uniforme até o botão */
 }
 
 .card-indicador {
@@ -387,10 +387,20 @@ nav a[data-rota][aria-current="page"] {
 }
 
 .card-indicador .icone {
-  font-size: 1.5rem;
-  line-height: 1;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--bg);
   color: var(--primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
+}
+
+.card-indicador .icone svg {
+  width: 20px;
+  height: 20px;
 }
 
 .card-indicador .info {
@@ -547,6 +557,114 @@ nav a[data-rota][aria-current="page"] {
   font-size: 0.875rem;
   padding: 16px;
   text-align: center;
+}
+
+/* =============================================================================
+   DASHBOARD - Últimas movimentações como card único (F01)
+   Escopo: .dashboard #ultimas-movimentacoes (não afeta .lista-lancamentos do Financeiro)
+   ============================================================================= */
+.dashboard #ultimas-movimentacoes {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.dashboard #ultimas-movimentacoes .item-movimentacao {
+  border: none;
+  border-radius: 0;
+  margin-bottom: 0;
+  box-shadow: none;
+  background: transparent;
+}
+
+.dashboard #ultimas-movimentacoes .item-movimentacao:not(:last-child) {
+  border-bottom: 1px solid var(--border);
+}
+
+.dashboard #ultimas-movimentacoes .item-movimentacao .movimentacao-link {
+  text-decoration: none;
+  color: inherit;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: 12px;
+  padding: 12px 16px;
+}
+
+.dashboard #ultimas-movimentacoes .item-movimentacao .movimentacao-link:hover,
+.dashboard #ultimas-movimentacoes .item-movimentacao .movimentacao-link:focus {
+  text-decoration: none;
+  background: var(--bg);
+}
+
+.dashboard #ultimas-movimentacoes .item-movimentacao .icone-movimentacao {
+  width: 36px;
+  height: 36px;
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.dashboard #ultimas-movimentacoes .item-movimentacao .info-principal {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.dashboard #ultimas-movimentacoes .item-movimentacao .descricao {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dashboard #ultimas-movimentacoes .item-movimentacao .detalhes {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dashboard #ultimas-movimentacoes .item-movimentacao .valor-seta-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.dashboard #ultimas-movimentacoes .item-movimentacao .valor {
+  white-space: nowrap;
+  font-size: 0.875rem;
+}
+
+.dashboard #ultimas-movimentacoes .item-movimentacao .seta-navegacao {
+  color: var(--text-secondary);
+  font-size: 1.125rem;
+  font-weight: bold;
+  flex-shrink: 0;
+}
+
+.dashboard #ultimas-movimentacoes .item-movimentacao .movimentacao-link:hover .seta-navegacao,
+.dashboard #ultimas-movimentacoes .item-movimentacao .movimentacao-link:focus .seta-navegacao {
+  color: var(--primary);
+}
+
+.dashboard #ultimas-movimentacoes .item-movimentacao .movimentacao-link:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: -3px;
+  border-radius: 0;
+}
+
+/* Empty state dentro do card único */
+.dashboard #ultimas-movimentacoes:empty::before {
+  content: "Nenhuma movimentação recente";
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  padding: 16px;
+  text-align: center;
+  display: block;
 }
 
 /* =============================================================================
@@ -1463,7 +1581,12 @@ nav a[data-rota][aria-current="page"] {
     gap: 8px;
   }
   .card-indicador .icone {
-    font-size: 1.2rem; /* Reduz o ícone */
+    width: 36px;
+    height: 36px;
+  }
+  .card-indicador .icone svg {
+    width: 18px;
+    height: 18px;
   }
   .card-indicador .valor {
     font-size: 1rem; /* Reduz o valor para caber */
@@ -1487,6 +1610,22 @@ nav a[data-rota][aria-current="page"] {
     align-items: center;
     gap: 8px;
     flex-shrink: 0;
+  }
+
+  /* Dashboard: card único para últimas movimentações (mobile) */
+  .dashboard #ultimas-movimentacoes .item-movimentacao .movimentacao-link {
+    padding: 12px 16px;
+  }
+  .dashboard #ultimas-movimentacoes .item-movimentacao .icone-movimentacao {
+    width: 32px;
+    height: 32px;
+    font-size: 0.875rem;
+  }
+  .dashboard #ultimas-movimentacoes .item-movimentacao .valor {
+    font-size: 0.8125rem;
+  }
+  .dashboard #ultimas-movimentacoes .item-movimentacao .detalhes {
+    font-size: 0.6875rem;
   }
 
   /* Login */
