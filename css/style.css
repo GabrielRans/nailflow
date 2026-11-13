@@ -420,7 +420,11 @@ nav a[data-rota][aria-current="page"] {
   display: flex;
   justify-content: center;
   width: 100%;
-  margin-bottom: 24px;
+}
+
+/* Botão Nova Movimentação no Dashboard (nova posição: após grid, antes do alerta) */
+.dashboard-nova-movimentacao {
+  margin-bottom: 16px;
 }
 
 /* Card de Alerta de Materiais */
@@ -1429,23 +1433,12 @@ nav a[data-rota][aria-current="page"] {
   /* =============================================================================
      DASHBOARD (F01) - Mobile
      ============================================================================= */
-  /* Cabeçalho: empilha título e botão */
+  /* Cabeçalho: apenas título e subtítulo (sem botão) */
   .page-header {
     display: flex;
     flex-direction: column;
     align-items: flex-start;
     gap: 16px;
-  }
-
-  .page-header .container-acao {
-    width: 100%;
-    display: block;
-  }
-
-  .page-header .container-acao .btn {
-    width: 100%;
-    text-align: center;
-    display: block;
   }
 
   /* Título e subtítulo do Dashboard */
@@ -1463,6 +1456,7 @@ nav a[data-rota][aria-current="page"] {
   .indicadores-grid {
     grid-template-columns: 1fr 1fr; /* Mantém 2 colunas */
     gap: 12px; /* Reduz o espaço entre os cards */
+    margin-bottom: 16px; /* Espaçamento uniforme: 16px até o botão */
   }
   .card-indicador {
     padding: 12px; /* Reduz o padding interno */
@@ -1475,10 +1469,24 @@ nav a[data-rota][aria-current="page"] {
     font-size: 1rem; /* Reduz o valor para caber */
   }
 
-  /* Botão "Nova movimentação" no mobile (fallback para outras telas) */
-  .container-acao .btn {
-    width: 100%; /* Ocupa a largura toda, como no wireframe */
+  /* Botão Nova Movimentação no mobile: largura total, 16px até o card de alerta */
+  .dashboard-nova-movimentacao {
+    display: block;
+    width: 100%;
+    margin-bottom: 16px;
+  }
+  .dashboard-nova-movimentacao .btn {
+    width: 100%;
     text-align: center;
+    display: block;
+  }
+
+  /* valor-seta-container: gap 8px para o chevron não colar no valor (mobile) */
+  .dashboard .valor-seta-container {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
   }
 
   /* Login */
@@ -1522,7 +1530,7 @@ nav a[data-rota][aria-current="page"] {
     margin-left: auto;
   }
 
-  /* Cabeçalho do Dashboard - Botão ao lado do título */
+  /* Cabeçalho do Dashboard - apenas título e subtítulo (sem botão) */
   .page-header {
     display: flex;
     justify-content: space-between;
@@ -1539,21 +1547,26 @@ nav a[data-rota][aria-current="page"] {
     color: var(--text-secondary);
   }
 
-  .page-header .container-acao {
-    display: block;
-    width: auto;
-    margin-bottom: 0;
-  }
-
   /* Grid de Indicadores - Mais espaçamento */
   .indicadores-grid {
     grid-template-columns: repeat(4, 1fr);
     gap: 24px;
-    margin-bottom: 32px;
+    margin-bottom: 16px; /* Espaço até o botão */
   }
   .card-indicador {
     padding: 24px;
     align-items: flex-start;
+  }
+
+  /* Botão Nova Movimentação no desktop: alinhado à direita, largura automática, abaixo da grade */
+  .dashboard-nova-movimentacao {
+    display: flex;
+    justify-content: flex-end;
+    width: 100%;
+    margin-bottom: 16px; /* Espaço até o card de alerta */
+  }
+  .dashboard-nova-movimentacao .btn {
+    width: auto;
   }
 
   /* Filtros (F02) */
@@ -1601,7 +1614,7 @@ nav a[data-rota][aria-current="page"] {
   .dashboard .valor-seta-container {
     display: flex;
     align-items: center;
-    gap: 16px;
+    gap: 8px;
     flex-shrink: 0;
   }
 }
