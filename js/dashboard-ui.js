@@ -47,18 +47,8 @@ function renderizarAlertaReposicao(materiais) {
     return;
   }
 
-  // Monta o texto: "1 item precisa de reposição" ou "N itens precisam de reposição"
-  let texto = `${count} ${count === 1 ? "item" : "itens"} precisa${count === 1 ? "" : "m"} de reposição`;
-
-  // Opcional: mostrar até 3 nomes dos itens críticos
-  if (count > 0) {
-    const nomes = itensReposicao
-      .slice(0, 3)
-      .map((m) => m.nome)
-      .join(", ");
-    const mais = count > 3 ? ` e mais ${count - 3}` : "";
-    texto += ` (${nomes}${mais})`;
-  }
+  // Texto: "1 item precisa de reposição" ou "N itens precisam de reposição"
+  const texto = `${count} ${count === 1 ? "item" : "itens"} precisa${count === 1 ? "" : "m"} de reposição`;
 
   alertaReposicaoTexto.textContent = texto;
   alertaReposicaoCard.hidden = false;

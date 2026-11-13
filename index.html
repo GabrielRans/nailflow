@@ -209,11 +209,16 @@
             hidden
             aria-label="Ver materiais que precisam de reposição"
           >
-            <div class="icone-alerta" aria-hidden="true">!</div>
+            <div class="icone-alerta" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+              </svg>
+            </div>
             <div class="texto-alerta">
               <strong>Materiais</strong>
               <span id="alerta-reposicao-texto"></span>
             </div>
+            <span class="seta-alerta" aria-hidden="true">></span>
           </a>
 
           <!-- Últimas movimentações -->
@@ -373,11 +378,12 @@
         </section>
 
         <section data-tela="materiais" aria-labelledby="materiais-titulo">
-          <h2 id="materiais-titulo" tabindex="-1">Materiais</h2>
-
-          <div class="container-acao">
-            <a href="#cadastro-material">Cadastrar material</a>
-          </div>
+          <header class="page-header">
+            <div class="header-texto">
+              <h2 id="materiais-titulo" tabindex="-1">Materiais</h2>
+              <p>Controle itens e reposição</p>
+            </div>
+          </header>
 
           <p id="materiais-feedback" class="materiais-feedback" role="status" aria-live="polite" hidden></p>
 
@@ -388,9 +394,43 @@
             <span>Carregando materiais...</span>
           </div>
 
+          <!-- Busca de materiais -->
+          <div class="materiais-busca" role="search" aria-label="Buscar materiais">
+            <svg class="icone-busca" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+            <input
+              type="search"
+              id="materiais-busca-input"
+              class="materiais-busca__input"
+              placeholder="Buscar material"
+              aria-label="Buscar material por nome"
+              autocomplete="off"
+            >
+          </div>
+
+          <!-- Botão Novo Material -->
+          <div class="container-acao">
+            <a href="#cadastro-material" class="btn btn--primario btn--bloco" id="btn-novo-material">
+              <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.5">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+              <span>Novo material</span>
+            </a>
+          </div>
+
+          <h3 id="lista-materiais-titulo" class="lista-materiais__titulo">Lista de materiais</h3>
+
           <div id="materiais-vazio" class="materiais-vazio" hidden>
             <h3 class="materiais-vazio__titulo">Nenhum material cadastrado</h3>
             <p class="materiais-vazio__descricao">Cadastre seu primeiro material para acompanhar o estoque e receber alertas de reposição.</p>
+          </div>
+
+          <div id="materiais-busca-vazio" class="materiais-vazio" hidden>
+            <h3 class="materiais-vazio__titulo">Nenhum material encontrado</h3>
+            <p class="materiais-vazio__descricao">Tente buscar com outro termo.</p>
           </div>
 
           <ul id="lista-materiais" class="lista-materiais" aria-label="Lista de materiais cadastrados"></ul>
@@ -400,87 +440,136 @@
           data-tela="cadastro-material"
           aria-labelledby="cadastro-material-titulo"
         >
-          <h2 id="cadastro-material-titulo" tabindex="-1">
-            Cadastro de materiais
-          </h2>
+          <!-- Botão Voltar -->
+          <button
+            type="button"
+            id="btn-voltar-materiais"
+            class="btn-voltar"
+            aria-label="Voltar para a lista de materiais"
+          >
+            <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.5">
+              <line x1="19" y1="12" x2="5" y2="12"></line>
+              <polyline points="12 19 5 12 12 5"></polyline>
+            </svg>
+            <span>Voltar</span>
+          </button>
+
+          <header class="page-header">
+            <div class="header-texto">
+              <h2 id="cadastro-material-titulo" tabindex="-1">Cadastrar material</h2>
+              <p id="cadastro-material-subtitulo">Adicione um novo material ao estoque.</p>
+            </div>
+          </header>
 
           <p id="form-material-erro" class="materiais-feedback materiais-feedback--erro" role="alert" hidden></p>
 
           <form id="form-material" class="form-material" novalidate>
             <div class="form-group form-group--full">
-              <label for="material-nome">Nome do material</label>
-              <input
-                type="text"
-                id="material-nome"
-                name="nome"
-                maxlength="100"
-                placeholder="Ex: Algodão prensado"
-                required
-                aria-describedby="material-nome-erro"
-              >
+              <label for="material-nome">Nome do material <span class="campo-obrigatorio" aria-hidden="true">*</span></label>
+              <div class="input-com-icone">
+                <svg class="icone-input" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path>
+                  <line x1="7" y1="7" x2="7.01" y2="7"></line>
+                </svg>
+                <input
+                  type="text"
+                  id="material-nome"
+                  name="nome"
+                  maxlength="100"
+                  placeholder="Ex.: Gel, Esmalte, Lixa..."
+                  required
+                  aria-describedby="material-nome-erro"
+                >
+              </div>
               <p id="material-nome-erro" class="form-erro-campo" role="alert" hidden></p>
             </div>
 
             <div class="form-group">
-              <label for="material-qtd-disponivel">Quantidade disponível</label>
-              <input
-                type="number"
-                id="material-qtd-disponivel"
-                name="quantidadeDisponivel"
-                min="0"
-                step="any"
-                placeholder="0"
-                required
-                aria-describedby="material-qtd-disponivel-erro"
-              >
+              <label for="material-qtd-disponivel">Quantidade disponível <span class="campo-obrigatorio" aria-hidden="true">*</span></label>
+              <div class="input-com-icone">
+                <svg class="icone-input" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                  <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                  <line x1="12" y1="22.08" x2="12" y2="12"></line>
+                </svg>
+                <input
+                  type="number"
+                  id="material-qtd-disponivel"
+                  name="quantidadeDisponivel"
+                  min="0"
+                  step="any"
+                  placeholder="Ex.: 10"
+                  required
+                  aria-describedby="material-qtd-disponivel-erro"
+                >
+              </div>
               <p id="material-qtd-disponivel-erro" class="form-erro-campo" role="alert" hidden></p>
             </div>
 
             <div class="form-group">
-              <label for="material-unidade">Unidade de medida</label>
-              <select
-                id="material-unidade"
-                name="unidade"
-                required
-                aria-describedby="material-unidade-erro"
-              >
-                <option value="">Selecione</option>
-                <option value="un">un (unidade)</option>
-                <option value="pct">pct (pacote)</option>
-                <option value="cx">cx (caixa)</option>
-                <option value="ml">ml (mililitros)</option>
-                <option value="l">l (litros)</option>
-                <option value="g">g (gramas)</option>
-                <option value="kg">kg (quilos)</option>
-                <option value="par">par (par)</option>
-                <option value="kit">kit (kit)</option>
-              </select>
+              <label for="material-unidade">Unidade <span class="campo-obrigatorio" aria-hidden="true">*</span></label>
+              <div class="input-com-icone">
+                <svg class="icone-input" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <line x1="2" y1="12" x2="22" y2="12"></line>
+                  <line x1="12" y1="2" x2="12" y2="22"></line>
+                </svg>
+                <select
+                  id="material-unidade"
+                  name="unidade"
+                  required
+                  aria-describedby="material-unidade-erro"
+                >
+                  <option value="">Selecione a unidade</option>
+                  <option value="un">un (unidade)</option>
+                  <option value="pct">pct (pacote)</option>
+                  <option value="cx">cx (caixa)</option>
+                  <option value="ml">ml (mililitros)</option>
+                  <option value="l">l (litros)</option>
+                  <option value="g">g (gramas)</option>
+                  <option value="kg">kg (quilos)</option>
+                  <option value="par">par (par)</option>
+                  <option value="kit">kit (kit)</option>
+                </select>
+              </div>
               <p id="material-unidade-erro" class="form-erro-campo" role="alert" hidden></p>
             </div>
 
             <div class="form-group form-group--full">
-              <label for="material-qtd-minima">Quantidade mínima (alerta de reposição)</label>
-              <input
-                type="number"
-                id="material-qtd-minima"
-                name="quantidadeMinima"
-                min="0"
-                step="any"
-                placeholder="0"
-                required
-                aria-describedby="material-qtd-minima-erro"
-              >
+              <label for="material-qtd-minima">Quantidade mínima <span class="campo-obrigatorio" aria-hidden="true">*</span></label>
+              <div class="input-com-icone">
+                <svg class="icone-input" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"></path>
+                  <line x1="12" y1="6" x2="12" y2="12"></line>
+                  <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                </svg>
+                <input
+                  type="number"
+                  id="material-qtd-minima"
+                  name="quantidadeMinima"
+                  min="0"
+                  step="any"
+                  placeholder="Ex.: 5"
+                  required
+                  aria-describedby="material-qtd-minima-erro"
+                >
+              </div>
               <p id="material-qtd-minima-erro" class="form-erro-campo" role="alert" hidden></p>
+              <p id="material-qtd-minima-ajuda" class="form-ajuda">Você será avisada quando a quantidade ficar igual ou abaixo deste valor.</p>
             </div>
 
-            <button type="submit" class="btn-submit-material" aria-busy="false">
-              <span>Salvar material</span>
-            </button>
+            <div class="acoes-formulario">
+              <button type="submit" class="btn btn--primario btn--bloco" aria-busy="false">
+                <svg class="icone-check" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+                <span>Salvar material</span>
+              </button>
+              <button type="button" id="btn-cancelar-material" class="btn btn--secundario btn--bloco">
+                Cancelar
+              </button>
+            </div>
           </form>
-
-          <div class="container-acao" style="margin-top: 16px;">
-            <a href="#materiais">Voltar para Materiais</a>
-          </div>
         </section>
         </main>
       </div> <!-- fim #app-logado -->

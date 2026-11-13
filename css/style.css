@@ -433,6 +433,23 @@ nav a[data-rota][aria-current="page"] {
   border-radius: var(--radius);
   background: var(--bg);
   margin-bottom: 24px;
+  text-decoration: none;
+  color: inherit;
+  transition: background-color var(--transition), border-color var(--transition), box-shadow var(--transition);
+}
+
+.card-alerta:hover,
+.card-alerta:focus,
+.card-alerta:visited {
+  text-decoration: none;
+  color: inherit;
+  background-color: var(--card);
+  box-shadow: var(--shadow-sm);
+}
+
+.card-alerta:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
 }
 
 .icone-alerta {
@@ -444,9 +461,12 @@ nav a[data-rota][aria-current="page"] {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: 700;
-  font-size: 1rem;
   flex-shrink: 0;
+}
+
+.icone-alerta svg {
+  width: 16px;
+  height: 16px;
 }
 
 .texto-alerta {
@@ -454,6 +474,7 @@ nav a[data-rota][aria-current="page"] {
   flex-direction: column;
   gap: 2px;
   min-width: 0;
+  flex: 1;
 }
 
 .texto-alerta strong {
@@ -464,6 +485,19 @@ nav a[data-rota][aria-current="page"] {
 .texto-alerta span {
   font-size: 0.75rem;
   color: var(--text-secondary);
+}
+
+.seta-alerta {
+  color: var(--text-secondary);
+  flex-shrink: 0;
+  font-size: 1.25rem;
+  font-weight: bold;
+  transition: color var(--transition);
+}
+
+.card-alerta:hover .seta-alerta,
+.card-alerta:focus .seta-alerta {
+  color: var(--primary);
 }
 
 /* Últimas movimentações */
