@@ -40,6 +40,8 @@
   --error-bg: var(--danger-bg);
   --error-border: var(--danger-border);
   --error-text: var(--danger);
+  /* Bottom nav altura fixa para cálculo de padding */
+  --bottom-nav-altura: 72px;
   --google-bg: #FFFFFF;
   --google-border: #E1E5EA;
   --google-hover: #F5F6F8;
@@ -1859,7 +1861,8 @@ nav a[data-rota][aria-current="page"] {
     border-top: 1px solid var(--border);
     justify-content: space-around;
     padding: 10px 0;
-    z-index: 1000;
+    padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+    z-index: 100; /* Abaixo do .toast-container (9999), acima do conteúdo */
   }
 
   .bottom-nav .nav-item {
@@ -1888,19 +1891,7 @@ nav a[data-rota][aria-current="page"] {
 
   /* Garante que o conteúdo não fique escondido atrás da barra inferior */
   main {
-    padding-bottom: 80px;
-  }
-
-  /* Esconde bottom-nav nas telas de formulário (movimentacao e cadastro-material) */
-  /* Usa :has() para detectar qual section está visível (sem hidden) */
-  #app-logado:has(section[data-tela="movimentacao"]:not([hidden])),
-  #app-logado:has(section[data-tela="cadastro-material"]:not([hidden])) {
-    .bottom-nav {
-      display: none !important;
-    }
-    main {
-      padding-bottom: 24px !important;
-    }
+    padding-bottom: calc(var(--bottom-nav-altura) + env(safe-area-inset-bottom, 0px) + 24px);
   }
 }
 

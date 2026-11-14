@@ -139,6 +139,17 @@
   outline-offset: 3px;
 }
 
+/* Container das ações — garante que o último elemento não tenha margem inferior
+   e crie contexto de empilhamento próprio para ficar acima da bottom-nav */
+#form-movimentacao .acoes-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 0;
+  position: relative;
+  z-index: 1;
+}
+
 @media (prefers-reduced-motion: reduce) {
   #form-movimentacao button[type="submit"],
   #form-movimentacao .btn--cancelar {

@@ -559,6 +559,9 @@
   flex-direction: column;
   gap: 12px;
   margin-top: 8px;
+  margin-bottom: 0;
+  position: relative;
+  z-index: 1;
 }
 
 .acoes-formulario .btn {
