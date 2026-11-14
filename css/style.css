@@ -869,40 +869,74 @@ nav a[data-rota][aria-current="page"] {
   text-overflow: ellipsis;
 }
 
-.item-movimentacao .btn-acao {
-  white-space: nowrap;
-  padding: 4px 8px;
-  font-size: 0.75rem;
+.item-movimentacao .acoes {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+/* Botões de ação por ícone (Editar / Excluir) */
+.item-movimentacao .btn-acao-editar,
+.item-movimentacao .btn-acao-excluir {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  min-height: 40px;
+  border: none;
   border-radius: var(--radius-sm);
+  background: transparent;
   cursor: pointer;
-  transition: background-color var(--transition), border-color var(--transition), color var(--transition);
+  color: inherit;
+  transition: background-color var(--transition), color var(--transition);
+  padding: 0;
+  flex-shrink: 0;
 }
 
-.item-movimentacao .btn-acao.editar {
-  border: 1px solid #007BFF;
-  background: transparent;
-  color: #007BFF;
+.item-movimentacao .btn-acao-editar {
+  color: var(--text-secondary);
 }
 
-.item-movimentacao .btn-acao.editar:hover {
-  background: color-mix(in srgb, #007BFF 10%, transparent);
-  color: #007BFF;
+.item-movimentacao .btn-acao-editar:hover:not(:disabled) {
+  background-color: var(--bg);
+  color: var(--text-primary);
 }
 
-.item-movimentacao .btn-acao.excluir {
-  border: 1px solid var(--error-text);
-  background: transparent;
-  color: var(--error-text);
+.item-movimentacao .btn-acao-excluir {
+  color: var(--danger);
 }
 
-.item-movimentacao .btn-acao.excluir:hover {
-  background: color-mix(in srgb, var(--error-text) 10%, transparent);
-  color: var(--error-text);
+.item-movimentacao .btn-acao-excluir:hover:not(:disabled) {
+  background-color: var(--danger-bg);
+  color: var(--danger-strong);
 }
 
-.item-movimentacao .btn-acao:focus-visible {
+.item-movimentacao .btn-acao-editar:disabled,
+.item-movimentacao .btn-acao-excluir:disabled,
+.item-movimentacao .btn-acao-editar[aria-busy="true"],
+.item-movimentacao .btn-acao-excluir[aria-busy="true"] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.item-movimentacao .btn-acao-editar:focus-visible,
+.item-movimentacao .btn-acao-excluir:focus-visible {
   outline: 3px solid var(--focus);
   outline-offset: 2px;
+}
+
+/* Spinner para estado de loading nos botões de ícone */
+.item-movimentacao .btn-acao-editar .spinner-icon,
+.item-movimentacao .btn-acao-excluir .spinner-icon {
+  width: 20px;
+  height: 20px;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 
 /* Empty state para lista de lançamentos */
@@ -1555,15 +1589,19 @@ nav a[data-rota][aria-current="page"] {
   .financeiro .item-movimentacao .acoes,
   .lista-lancamentos .item-movimentacao .acoes {
     display: flex;
-    gap: 4px;
+    gap: 8px;
     flex-wrap: nowrap;
   }
 
-  .financeiro .item-movimentacao .btn-acao,
-  .lista-lancamentos .item-movimentacao .btn-acao {
-    padding: 4px 6px;
-    font-size: 0.7rem;
-    white-space: nowrap;
+  .financeiro .item-movimentacao .btn-acao-editar,
+  .financeiro .item-movimentacao .btn-acao-excluir,
+  .lista-lancamentos .item-movimentacao .btn-acao-editar,
+  .lista-lancamentos .item-movimentacao .btn-acao-excluir {
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+    min-height: 40px;
+    padding: 0;
   }
 
   /* =============================================================================
