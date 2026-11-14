@@ -44,8 +44,8 @@ function rowParaMovimentacao(row) {
     observacao: row.observacao ?? '',
     estudio_id: row.estudio_id,
     usuario_id: row.usuario_id,
-    created_at: row.created_at,
-    updated_at: row.updated_at
+    criado_em: row.criado_em,
+    atualizado_em: row.atualizado_em
   };
 }
 
@@ -221,15 +221,15 @@ export async function criarFinanceiroRepository() {
      * @returns {Promise<boolean>}
      */
     async excluir(id) {
-      const { error, count } = await supabase
+      const { data, error } = await supabase
         .from(TABELA)
         .delete()
         .eq('estudio_id', estudioId)
         .eq('id', id)
-        .select('id', { count: 'exact', head: true });
+        .select('id');
 
       if (error) throw error;
-      return count > 0;
+      return (data?.length ?? 0) > 0;
     },
 
     /**

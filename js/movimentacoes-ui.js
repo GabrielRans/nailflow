@@ -156,7 +156,11 @@ function renderizarMovimentacoes(movimentacoes) {
 
     const detalhes = document.createElement("span");
     detalhes.className = "detalhes";
-    detalhes.textContent = `${movimentacao.categoria} • ${movimentacao.data}`;
+    // Formata data para DD/MM/AAAA apenas na exibição
+    const dataFormatada = movimentacao.data
+      ? movimentacao.data.split("-").reverse().join("/")
+      : "";
+    detalhes.textContent = `${movimentacao.categoria} • ${dataFormatada}`;
 
     infoPrincipal.append(descricao, detalhes);
 
@@ -173,19 +177,32 @@ function renderizarMovimentacoes(movimentacoes) {
     const acoes = document.createElement("div");
     acoes.className = "acoes";
 
+    // Botão Editar (ícone de lápis)
     const botaoEditar = document.createElement("button");
     botaoEditar.type = "button";
-    botaoEditar.className = "btn-acao editar";
-    botaoEditar.textContent = "Editar";
+    botaoEditar.className = "btn-acao-editar";
     botaoEditar.setAttribute(
       "aria-label",
       `Editar movimentação: ${movimentacao.descricao}`
     );
+    botaoEditar.title = `Editar movimentação: ${movimentacao.descricao}`;
+    botaoEditar.innerHTML = `
+      <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+      </svg>
+    `;
 
     botaoEditar.addEventListener("click", async () => {
       // Usa API assíncrona para buscar a movimentação (compatível com Supabase)
       botaoEditar.disabled = true;
-      botaoEditar.textContent = "Carregando...";
+      botaoEditar.setAttribute("aria-busy", "true");
+      botaoEditar.innerHTML = `
+        <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="spinner-icon" style="animation: spin 1s linear infinite;">
+          <circle cx="12" cy="12" r="10" stroke-opacity="0.25"></circle>
+          <path d="M12 2a10 10 0 0 1 10 10" stroke-opacity="1"></path>
+        </svg>
+      `;
 
       try {
         const movimentacaoSelecionada = await window.NailFlow.financeiro.buscarMovimentacaoPorIdAsync(movimentacao.id);
@@ -194,7 +211,13 @@ function renderizarMovimentacoes(movimentacoes) {
           mensagemErroFinanceiro.textContent =
             "Não foi possível editar esta movimentação. O registro não foi encontrado.";
           botaoEditar.disabled = false;
-          botaoEditar.textContent = "Editar";
+          botaoEditar.removeAttribute("aria-busy");
+          botaoEditar.innerHTML = `
+            <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+            </svg>
+          `;
           return;
         }
 
@@ -225,18 +248,31 @@ function renderizarMovimentacoes(movimentacoes) {
           "Erro ao carregar dados da movimentação. Tente novamente.";
       } finally {
         botaoEditar.disabled = false;
-        botaoEditar.textContent = "Editar";
+        botaoEditar.removeAttribute("aria-busy");
+        botaoEditar.innerHTML = `
+          <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+          </svg>
+        `;
       }
     });
 
+    // Botão Excluir (ícone de lixeira)
     const botaoExcluir = document.createElement("button");
     botaoExcluir.type = "button";
-    botaoExcluir.className = "btn-acao excluir";
-    botaoExcluir.textContent = "Excluir";
+    botaoExcluir.className = "btn-acao-excluir";
     botaoExcluir.setAttribute(
       "aria-label",
       `Excluir movimentação: ${movimentacao.descricao}`
     );
+    botaoExcluir.title = `Excluir movimentação: ${movimentacao.descricao}`;
+    botaoExcluir.innerHTML = `
+      <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="3 6 5 6 21 6"></polyline>
+        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+      </svg>
+    `;
 
     botaoExcluir.addEventListener("click", async () => {
       const confirmou = confirm(
@@ -246,21 +282,39 @@ function renderizarMovimentacoes(movimentacoes) {
       if (!confirmou) return;
 
       botaoExcluir.disabled = true;
-      botaoExcluir.textContent = "Excluindo...";
+      botaoExcluir.setAttribute("aria-busy", "true");
+      botaoExcluir.innerHTML = `
+        <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="spinner-icon" style="animation: spin 1s linear infinite;">
+          <circle cx="12" cy="12" r="10" stroke-opacity="0.25"></circle>
+          <path d="M12 2a10 10 0 0 1 10 10" stroke-opacity="1"></path>
+        </svg>
+      `;
 
       try {
         const ok = await window.NailFlow.financeiro.excluirMovimentacaoAsync(movimentacao.id);
         if (!ok) {
           alert("Erro ao excluir movimentação. Tente novamente.");
           botaoExcluir.disabled = false;
-          botaoExcluir.textContent = "Excluir";
+          botaoExcluir.removeAttribute("aria-busy");
+          botaoExcluir.innerHTML = `
+            <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="3 6 5 6 21 6"></polyline>
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+            </svg>
+          `;
         }
         // Evento 'movimentacoes:atualizadas' disparará renderização automática
       } catch (err) {
         console.error('[UI] Erro ao excluir:', err);
         alert("Erro ao excluir movimentação.");
         botaoExcluir.disabled = false;
-        botaoExcluir.textContent = "Excluir";
+        botaoExcluir.removeAttribute("aria-busy");
+        botaoExcluir.innerHTML = `
+          <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="3 6 5 6 21 6"></polyline>
+            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+          </svg>
+        `;
       }
     });
 

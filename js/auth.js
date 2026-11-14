@@ -31,6 +31,8 @@ const estadoAuth = {
   autorizado: false,     // AuthZ: tem estudioId válido (vínculo com estúdio)
   // Fluxo de redefinição de senha
   emRedefinicaoSenha: false,
+  // Deduplicação: último userId processado com sucesso (limpo no logout)
+  _ultimoUserIdProcessado: null,
 };
 
 // Fallback síncrono para scripts clássicos (não ES modules)
@@ -114,6 +116,7 @@ function limparEstadoAuth() {
   estadoAuth.autenticado = false;
   estadoAuth.autorizado = false;
   estadoAuth.emRedefinicaoSenha = false;
+  estadoAuth._ultimoUserIdProcessado = null; // Limpa deduplicação para permitir novo login
 
   window.NailFlow.auth.sessao = null;
   window.NailFlow.auth.usuario = null;
@@ -409,6 +412,16 @@ export async function inicializarAuth() {
  * Busca estudio_id e atualiza estado, disparando eventos apropriados
  */
 async function processarLoginAsync(sessao, usuario) {
+  // Deduplicação SÍNCRONA: checa e marca ANTES de qualquer await
+  // Evita que chamadas concorrentes (getSession + INITIAL_SESSION + SIGNED_IN) processem o mesmo login
+  if (estadoAuth._ultimoUserIdProcessado === usuario.id) {
+    console.log('[Auth] Login duplicado ignorado para userId:', usuario.id);
+    return;
+  }
+
+  // Marca como "em processamento" para bloquear outras chamadas concorrentes para o mesmo userId
+  estadoAuth._ultimoUserIdProcessado = usuario.id;
+
   try {
     // Buscar estudio_id vinculado a este usuário
     const estudioId = await buscarEstudioIdDoUsuario(usuario.id);
@@ -450,6 +463,8 @@ async function processarLoginAsync(sessao, usuario) {
       dispararEvento('auth:pronto', { autenticado: true, autorizado: false });
     }
   } catch (err) {
+    // Em caso de erro, limpa a marca para permitir retry
+    estadoAuth._ultimoUserIdProcessado = null;
     console.error('[Auth] Erro ao processar login:', err);
     dispararEvento('auth:erro', {
       mensagem: 'Erro ao finalizar login. Recarregue a página.',

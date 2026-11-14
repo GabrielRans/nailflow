@@ -11,8 +11,48 @@ const formatarIndicadores = new Intl.NumberFormat("pt-BR", {
 
 const estadoDashboard = document.querySelector(".dashboard__estado");
 const cardsIndicadores = document.querySelectorAll(".dashboard [data-indicador]");
+const alertaReposicaoCard = document.getElementById("alerta-reposicao");
+const alertaReposicaoTexto = document.getElementById("alerta-reposicao-texto");
 
 let carregandoDashboard = false;
+
+/**
+ * Retorna os materiais que precisam de reposição (quantidadeDisponivel <= quantidadeMinima)
+ * Função pura - reutiliza a mesma regra da tela de Materiais (materiais-ui.js)
+ * @param {Array} materiais - Lista de materiais
+ * @returns {Array} Materiais que precisam de reposição
+ */
+function obterMateriaisParaReposicao(materiais) {
+  if (!Array.isArray(materiais)) return [];
+  return materiais.filter(
+    (mat) =>
+      mat &&
+      typeof mat === "object" &&
+      Number(mat.quantidadeDisponivel) <= Number(mat.quantidadeMinima)
+  );
+}
+
+/**
+ * Atualiza o card de alerta de reposição no Dashboard
+ * @param {Array} materiais - Lista completa de materiais
+ */
+function renderizarAlertaReposicao(materiais) {
+  if (!alertaReposicaoCard || !alertaReposicaoTexto) return;
+
+  const itensReposicao = obterMateriaisParaReposicao(materiais);
+  const count = itensReposicao.length;
+
+  if (count === 0) {
+    alertaReposicaoCard.hidden = true;
+    return;
+  }
+
+  // Texto: "1 item precisa de reposição" ou "N itens precisam de reposição"
+  const texto = `${count} ${count === 1 ? "item" : "itens"} precisa${count === 1 ? "" : "m"} de reposição`;
+
+  alertaReposicaoTexto.textContent = texto;
+  alertaReposicaoCard.hidden = false;
+}
 
 /**
  * Mostra/esconde estado de carregamento nos cards
@@ -96,6 +136,7 @@ function inicializarDashboard() {
   if (window.NailFlow?.auth?.autorizado === true) {
     carregarIndicadores();
     carregarUltimasMovimentacoes();
+    carregarAlertaReposicao();
     return;
   }
 
@@ -103,8 +144,14 @@ function inicializarDashboard() {
   window.addEventListener('auth:login', async () => {
     await carregarIndicadores();
     await carregarUltimasMovimentacoes();
+    await carregarAlertaReposicao();
   }, { once: true });
 }
+
+// Atualiza o alerta de reposição quando materiais são alterados
+document.addEventListener("materiais:atualizados", async () => {
+  await carregarAlertaReposicao();
+});
 
 // Limpa o dashboard no logout
 window.addEventListener('auth:logout', () => {
@@ -113,15 +160,41 @@ window.addEventListener('auth:logout', () => {
     estadoDashboard.textContent = "";
     estadoDashboard.hidden = true;
   }
+  if (alertaReposicaoCard) alertaReposicaoCard.hidden = true;
 });
 
 /**
+ * Carrega materiais e atualiza o card de alerta de reposição
+ */
+async function carregarAlertaReposicao() {
+  try {
+    const api = window.NailFlow?.materiais;
+    const fnListar = api?.listarMateriaisAsync || api?.listarMateriais;
+
+    if (typeof fnListar !== "function") {
+      // Módulo de materiais não disponível - esconde o card silenciosamente
+      if (alertaReposicaoCard) alertaReposicaoCard.hidden = true;
+      return;
+    }
+
+    const res = await fnListar();
+    const materiais = res?.sucesso ? res.dados : (Array.isArray(res) ? res : []);
+    renderizarAlertaReposicao(materiais);
+  } catch (err) {
+    console.error('[Dashboard] Erro ao carregar alerta de reposição:', err);
+    // Em caso de erro, esconde o card sem quebrar o resto do dashboard
+    if (alertaReposicaoCard) alertaReposicaoCard.hidden = true;
+  }
+}
+
+/**
  * Formata data para exibição
- * @param {string} data - Data no formato YYYY-MM-DD
+ * @param {string} data - Data no formato YYYY-MM-DD ou ISO com hora
  * @returns {string} Data formatada DD/MM
  */
 function formatarDataCurta(data) {
-  const [ano, mes, dia] = data.split('-');
+  if (!data) return '--/--';
+  const [, mes, dia] = String(data).split('T')[0].split('-');
   return `${dia}/${mes}`;
 }
 
@@ -137,8 +210,9 @@ async function carregarUltimasMovimentacoes() {
 
     // Ordena por data decrescente, depois por ID para desempate
     movs.sort((a, b) => {
-      if (b.data !== a.data) return b.data.localeCompare(a.data);
-      return b.id.localeCompare(a.id);
+      const da = a.data ?? '', db = b.data ?? '';
+      if (db !== da) return db.localeCompare(da);
+      return String(b.id).localeCompare(String(a.id));
     });
 
     // Pega apenas as 5 primeiras

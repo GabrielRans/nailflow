@@ -62,7 +62,8 @@ async function carregarRepoSupabase() {
   try {
     const modulo = await import('./repositories/financeiro-repo.js');
     return modulo.tentarCriarFinanceiroRepository;
-  } catch {
+  } catch (erro) {
+    console.error('[Erro] Falha ao carregar o repositório Supabase:', erro);
     return null;
   }
 }
@@ -127,7 +128,7 @@ async function reinicializarRepositorio() {
   repoSupabase = null;
   inicializacaoPromise = null;
   movimentacoes = [];
-  return await obterRepositorio();
+  return await obterRepositorioFinanceiro();
 }
 
 /**
@@ -144,10 +145,45 @@ function _setRepositorioParaTeste(repo) {
 }
 
 /**
+ * Inicializa o repositório financeiro (Supabase) de forma explícita
+ * Deve ser chamado após autenticação/autorização estar pronta
+ * @returns {Promise<Object>} Repositório Supabase inicializado
+ */
+async function inicializarFinanceiro() {
+  // Se já tem repositório Supabase válido, retorna ele
+  if (repositorioAtivo === 'supabase' && repoSupabase) {
+    return repoSupabase;
+  }
+
+  // Se já está inicializando, aguarda a inicialização existente
+  if (inicializacaoPromise) {
+    return await inicializacaoPromise;
+  }
+
+  // Inicializa Supabase
+  inicializacaoPromise = inicializarRepositorioSupabase()
+    .then(repo => {
+      // Sucesso: repositório pronto
+      return repo;
+    })
+    .catch(err => {
+      // Falha: limpa estado para permitir retry
+      console.error('[Financeiro] Falha ao inicializar Supabase:', err.message);
+      inicializacaoPromise = null;
+      repoSupabase = null;
+      repositorioAtivo = null;
+      throw err;
+    });
+
+  return await inicializacaoPromise;
+}
+
+/**
+ * Obtém o repositório financeiro ativo (inicializa Supabase se necessário)
  * Inicialização preguiçosa (lazy) - só inicializa na primeira chamada da API assíncrona
  * @returns {Promise<Object>} Repositório ativo
  */
-async function obterRepositorio() {
+async function obterRepositorioFinanceiro() {
   // Se já tem repositório de memória (testes), usa ele
   if (repositorioAtivo === 'memory' && repoMemory) {
     return repoMemory;
@@ -158,19 +194,8 @@ async function obterRepositorio() {
     return repoSupabase;
   }
 
-  // Se já está inicializando, aguarda
-  if (inicializacaoPromise) {
-    return await inicializacaoPromise;
-  }
-
   // Inicializa Supabase (apenas na primeira chamada)
-  inicializacaoPromise = inicializarRepositorioSupabase().catch(err => {
-    console.error('[Financeiro] Falha ao inicializar Supabase:', err.message);
-    inicializacaoPromise = null; // Permite retry
-    throw err;
-  });
-
-  return await inicializacaoPromise;
+  return await inicializarFinanceiro();
 }
 
 // =============================================================================
@@ -197,7 +222,7 @@ function dispararAtualizacao(lista) {
 async function adicionarMovimentacaoAsync(movimentacao) {
   if (!validarMovimentacao(movimentacao)) return false;
   try {
-    const repo = await obterRepositorio();
+    const repo = await obterRepositorioFinanceiro();
     await repo.adicionar(movimentacao);
     movimentacoes = await repo.listar();
     dispararAtualizacao(movimentacoes);
@@ -213,7 +238,7 @@ async function adicionarMovimentacaoAsync(movimentacao) {
  * @returns {Promise<Array>}
  */
 async function listarMovimentacoesAsync() {
-  const repo = await obterRepositorio();
+  const repo = await obterRepositorioFinanceiro();
   movimentacoes = await repo.listar();
   return [...movimentacoes];
 }
@@ -224,7 +249,7 @@ async function listarMovimentacoesAsync() {
  * @returns {Promise<Object|null>}
  */
 async function buscarMovimentacaoPorIdAsync(id) {
-  const repo = await obterRepositorio();
+  const repo = await obterRepositorioFinanceiro();
   return await repo.buscarPorId(id);
 }
 
@@ -236,13 +261,13 @@ async function buscarMovimentacaoPorIdAsync(id) {
  */
 async function atualizarMovimentacaoAsync(id, dadosAtualizados) {
   try {
-    const repo = await obterRepositorio();
+    const repo = await obterRepositorioFinanceiro();
     const ok = await repo.atualizar(id, dadosAtualizados);
     if (ok) {
       movimentacoes = await repo.listar();
       dispararAtualizacao(movimentacoes);
     }
-    return ok;
+    return Boolean(ok);
   } catch (err) {
     console.error('[Financeiro] Erro ao atualizar:', err);
     return false;
@@ -256,13 +281,13 @@ async function atualizarMovimentacaoAsync(id, dadosAtualizados) {
  */
 async function excluirMovimentacaoAsync(id) {
   try {
-    const repo = await obterRepositorio();
+    const repo = await obterRepositorioFinanceiro();
     const ok = await repo.excluir(id);
     if (ok) {
       movimentacoes = await repo.listar();
       dispararAtualizacao(movimentacoes);
     }
-    return ok;
+    return Boolean(ok);
   } catch (err) {
     console.error('[Financeiro] Erro ao excluir:', err);
     return false;
@@ -276,7 +301,7 @@ async function excluirMovimentacaoAsync(id) {
  * @returns {Promise<Array>}
  */
 async function filtrarMovimentacoesPorPeriodoAsync(dataInicial, dataFinal) {
-  const repo = await obterRepositorio();
+  const repo = await obterRepositorioFinanceiro();
   return await repo.filtrarPorPeriodo(dataInicial, dataFinal);
 }
 
@@ -556,6 +581,7 @@ const apiFinanceiro = {
   validarMovimentacao,
   calcularIndicadoresFinanceiros,
   reinicializarRepositorio,
+  inicializarFinanceiro,
 
   // Internos (para testes)
   _getCache: () => movimentacoes,

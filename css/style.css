@@ -10,9 +10,13 @@
    --primary-hover: #63344A (hover do primário)
    --primary-active: #4F2A3A (active do primário)
    --border: #E1E5EA (bordas)
-   --error-bg: #FCECEF (fundo erro)
-   --error-border: #D65D68 (borda erro)
-   --error-text: #D65D68 (texto erro)
+   --danger: #DC2626 (vermelho perigo/erro/saída)
+   --danger-strong: #991B1B (vermelho forte para texto sobre branco)
+   --danger-bg: #FEF2F2 (fundo perigo)
+   --danger-border: #FECACA (borda perigo)
+   --error-bg: var(--danger-bg) (alias compatibilidade)
+   --error-border: var(--danger-border) (alias compatibilidade)
+   --error-text: var(--danger) (alias compatibilidade)
    --focus: #7C435C (foco visível)
 */
 
@@ -27,9 +31,17 @@
   --primary-active: #4F2A3A;
   --border: #E1E5EA;
   --border-focus: #7C435C;
-  --error-bg: #FCECEF;
-  --error-border: #D65D68;
-  --error-text: #D65D68;
+  /* Danger tokens (erro/perigo/saída) */
+  --danger: #DC2626;
+  --danger-strong: #991B1B;
+  --danger-bg: #FEF2F2;
+  --danger-border: #FECACA;
+  /* Aliases de erro apontando para danger (compatibilidade) */
+  --error-bg: var(--danger-bg);
+  --error-border: var(--danger-border);
+  --error-text: var(--danger);
+  /* Bottom nav altura fixa para cálculo de padding */
+  --bottom-nav-altura: 72px;
   --google-bg: #FFFFFF;
   --google-border: #E1E5EA;
   --google-hover: #F5F6F8;
@@ -39,6 +51,14 @@
   --radius: 12px;
   --radius-sm: 8px;
   --transition: 160ms ease;
+}
+
+[data-theme="dark"] {
+  /* Danger tokens dark mode */
+  --danger: #EF4444;
+  --danger-strong: #FCA5A5;
+  --danger-bg: #3D1A1A;
+  --danger-border: #7A2E2E;
 }
 
 /* Transição suave para componentes */
@@ -373,7 +393,7 @@ nav a[data-rota][aria-current="page"] {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 16px;
-  margin-bottom: 24px;
+  margin-bottom: 16px; /* Espaçamento uniforme até o botão */
 }
 
 .card-indicador {
@@ -387,10 +407,20 @@ nav a[data-rota][aria-current="page"] {
 }
 
 .card-indicador .icone {
-  font-size: 1.5rem;
-  line-height: 1;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--bg);
   color: var(--primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
+}
+
+.card-indicador .icone svg {
+  width: 20px;
+  height: 20px;
 }
 
 .card-indicador .info {
@@ -420,7 +450,11 @@ nav a[data-rota][aria-current="page"] {
   display: flex;
   justify-content: center;
   width: 100%;
-  margin-bottom: 24px;
+}
+
+/* Botão Nova Movimentação no Dashboard (nova posição: após grid, antes do alerta) */
+.dashboard-nova-movimentacao {
+  margin-bottom: 16px;
 }
 
 /* Card de Alerta de Materiais */
@@ -433,6 +467,23 @@ nav a[data-rota][aria-current="page"] {
   border-radius: var(--radius);
   background: var(--bg);
   margin-bottom: 24px;
+  text-decoration: none;
+  color: inherit;
+  transition: background-color var(--transition), border-color var(--transition), box-shadow var(--transition);
+}
+
+.card-alerta:hover,
+.card-alerta:focus,
+.card-alerta:visited {
+  text-decoration: none;
+  color: inherit;
+  background-color: var(--card);
+  box-shadow: var(--shadow-sm);
+}
+
+.card-alerta:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
 }
 
 .icone-alerta {
@@ -444,9 +495,12 @@ nav a[data-rota][aria-current="page"] {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: 700;
-  font-size: 1rem;
   flex-shrink: 0;
+}
+
+.icone-alerta svg {
+  width: 16px;
+  height: 16px;
 }
 
 .texto-alerta {
@@ -454,6 +508,7 @@ nav a[data-rota][aria-current="page"] {
   flex-direction: column;
   gap: 2px;
   min-width: 0;
+  flex: 1;
 }
 
 .texto-alerta strong {
@@ -464,6 +519,19 @@ nav a[data-rota][aria-current="page"] {
 .texto-alerta span {
   font-size: 0.75rem;
   color: var(--text-secondary);
+}
+
+.seta-alerta {
+  color: var(--text-secondary);
+  flex-shrink: 0;
+  font-size: 1.25rem;
+  font-weight: bold;
+  transition: color var(--transition);
+}
+
+.card-alerta:hover .seta-alerta,
+.card-alerta:focus .seta-alerta {
+  color: var(--primary);
 }
 
 /* Últimas movimentações */
@@ -509,6 +577,114 @@ nav a[data-rota][aria-current="page"] {
   font-size: 0.875rem;
   padding: 16px;
   text-align: center;
+}
+
+/* =============================================================================
+   DASHBOARD - Últimas movimentações como card único (F01)
+   Escopo: .dashboard #ultimas-movimentacoes (não afeta .lista-lancamentos do Financeiro)
+   ============================================================================= */
+.dashboard #ultimas-movimentacoes {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.dashboard #ultimas-movimentacoes .item-movimentacao {
+  border: none;
+  border-radius: 0;
+  margin-bottom: 0;
+  box-shadow: none;
+  background: transparent;
+}
+
+.dashboard #ultimas-movimentacoes .item-movimentacao:not(:last-child) {
+  border-bottom: 1px solid var(--border);
+}
+
+.dashboard #ultimas-movimentacoes .item-movimentacao .movimentacao-link {
+  text-decoration: none;
+  color: inherit;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: 12px;
+  padding: 12px 16px;
+}
+
+.dashboard #ultimas-movimentacoes .item-movimentacao .movimentacao-link:hover,
+.dashboard #ultimas-movimentacoes .item-movimentacao .movimentacao-link:focus {
+  text-decoration: none;
+  background: var(--bg);
+}
+
+.dashboard #ultimas-movimentacoes .item-movimentacao .icone-movimentacao {
+  width: 36px;
+  height: 36px;
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.dashboard #ultimas-movimentacoes .item-movimentacao .info-principal {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.dashboard #ultimas-movimentacoes .item-movimentacao .descricao {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dashboard #ultimas-movimentacoes .item-movimentacao .detalhes {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dashboard #ultimas-movimentacoes .item-movimentacao .valor-seta-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.dashboard #ultimas-movimentacoes .item-movimentacao .valor {
+  white-space: nowrap;
+  font-size: 0.875rem;
+}
+
+.dashboard #ultimas-movimentacoes .item-movimentacao .seta-navegacao {
+  color: var(--text-secondary);
+  font-size: 1.125rem;
+  font-weight: bold;
+  flex-shrink: 0;
+}
+
+.dashboard #ultimas-movimentacoes .item-movimentacao .movimentacao-link:hover .seta-navegacao,
+.dashboard #ultimas-movimentacoes .item-movimentacao .movimentacao-link:focus .seta-navegacao {
+  color: var(--primary);
+}
+
+.dashboard #ultimas-movimentacoes .item-movimentacao .movimentacao-link:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: -3px;
+  border-radius: 0;
+}
+
+/* Empty state dentro do card único */
+.dashboard #ultimas-movimentacoes:empty::before {
+  content: "Nenhuma movimentação recente";
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  padding: 16px;
+  text-align: center;
+  display: block;
 }
 
 /* =============================================================================
@@ -695,40 +871,74 @@ nav a[data-rota][aria-current="page"] {
   text-overflow: ellipsis;
 }
 
-.item-movimentacao .btn-acao {
-  white-space: nowrap;
-  padding: 4px 8px;
-  font-size: 0.75rem;
+.item-movimentacao .acoes {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+/* Botões de ação por ícone (Editar / Excluir) */
+.item-movimentacao .btn-acao-editar,
+.item-movimentacao .btn-acao-excluir {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  min-height: 40px;
+  border: none;
   border-radius: var(--radius-sm);
+  background: transparent;
   cursor: pointer;
-  transition: background-color var(--transition), border-color var(--transition), color var(--transition);
+  color: inherit;
+  transition: background-color var(--transition), color var(--transition);
+  padding: 0;
+  flex-shrink: 0;
 }
 
-.item-movimentacao .btn-acao.editar {
-  border: 1px solid #007BFF;
-  background: transparent;
-  color: #007BFF;
+.item-movimentacao .btn-acao-editar {
+  color: var(--text-secondary);
 }
 
-.item-movimentacao .btn-acao.editar:hover {
-  background: color-mix(in srgb, #007BFF 10%, transparent);
-  color: #007BFF;
+.item-movimentacao .btn-acao-editar:hover:not(:disabled) {
+  background-color: var(--bg);
+  color: var(--text-primary);
 }
 
-.item-movimentacao .btn-acao.excluir {
-  border: 1px solid var(--error-text);
-  background: transparent;
-  color: var(--error-text);
+.item-movimentacao .btn-acao-excluir {
+  color: var(--danger);
 }
 
-.item-movimentacao .btn-acao.excluir:hover {
-  background: color-mix(in srgb, var(--error-text) 10%, transparent);
-  color: var(--error-text);
+.item-movimentacao .btn-acao-excluir:hover:not(:disabled) {
+  background-color: var(--danger-bg);
+  color: var(--danger-strong);
 }
 
-.item-movimentacao .btn-acao:focus-visible {
+.item-movimentacao .btn-acao-editar:disabled,
+.item-movimentacao .btn-acao-excluir:disabled,
+.item-movimentacao .btn-acao-editar[aria-busy="true"],
+.item-movimentacao .btn-acao-excluir[aria-busy="true"] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.item-movimentacao .btn-acao-editar:focus-visible,
+.item-movimentacao .btn-acao-excluir:focus-visible {
   outline: 3px solid var(--focus);
   outline-offset: 2px;
+}
+
+/* Spinner para estado de loading nos botões de ícone */
+.item-movimentacao .btn-acao-editar .spinner-icon,
+.item-movimentacao .btn-acao-excluir .spinner-icon {
+  width: 20px;
+  height: 20px;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 
 /* Empty state para lista de lançamentos */
@@ -1381,37 +1591,30 @@ nav a[data-rota][aria-current="page"] {
   .financeiro .item-movimentacao .acoes,
   .lista-lancamentos .item-movimentacao .acoes {
     display: flex;
-    gap: 4px;
+    gap: 8px;
     flex-wrap: nowrap;
   }
 
-  .financeiro .item-movimentacao .btn-acao,
-  .lista-lancamentos .item-movimentacao .btn-acao {
-    padding: 4px 6px;
-    font-size: 0.7rem;
-    white-space: nowrap;
+  .financeiro .item-movimentacao .btn-acao-editar,
+  .financeiro .item-movimentacao .btn-acao-excluir,
+  .lista-lancamentos .item-movimentacao .btn-acao-editar,
+  .lista-lancamentos .item-movimentacao .btn-acao-excluir {
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+    min-height: 40px;
+    padding: 0;
   }
 
   /* =============================================================================
      DASHBOARD (F01) - Mobile
      ============================================================================= */
-  /* Cabeçalho: empilha título e botão */
+  /* Cabeçalho: apenas título e subtítulo (sem botão) */
   .page-header {
     display: flex;
     flex-direction: column;
     align-items: flex-start;
     gap: 16px;
-  }
-
-  .page-header .container-acao {
-    width: 100%;
-    display: block;
-  }
-
-  .page-header .container-acao .btn {
-    width: 100%;
-    text-align: center;
-    display: block;
   }
 
   /* Título e subtítulo do Dashboard */
@@ -1429,22 +1632,58 @@ nav a[data-rota][aria-current="page"] {
   .indicadores-grid {
     grid-template-columns: 1fr 1fr; /* Mantém 2 colunas */
     gap: 12px; /* Reduz o espaço entre os cards */
+    margin-bottom: 16px; /* Espaçamento uniforme: 16px até o botão */
   }
   .card-indicador {
     padding: 12px; /* Reduz o padding interno */
     gap: 8px;
   }
   .card-indicador .icone {
-    font-size: 1.2rem; /* Reduz o ícone */
+    width: 36px;
+    height: 36px;
+  }
+  .card-indicador .icone svg {
+    width: 18px;
+    height: 18px;
   }
   .card-indicador .valor {
     font-size: 1rem; /* Reduz o valor para caber */
   }
 
-  /* Botão "Nova movimentação" no mobile (fallback para outras telas) */
-  .container-acao .btn {
-    width: 100%; /* Ocupa a largura toda, como no wireframe */
+  /* Botão Nova Movimentação no mobile: largura total, 16px até o card de alerta */
+  .dashboard-nova-movimentacao {
+    display: block;
+    width: 100%;
+    margin-bottom: 16px;
+  }
+  .dashboard-nova-movimentacao .btn {
+    width: 100%;
     text-align: center;
+    display: block;
+  }
+
+  /* valor-seta-container: gap 8px para o chevron não colar no valor (mobile) */
+  .dashboard .valor-seta-container {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+
+  /* Dashboard: card único para últimas movimentações (mobile) */
+  .dashboard #ultimas-movimentacoes .item-movimentacao .movimentacao-link {
+    padding: 12px 16px;
+  }
+  .dashboard #ultimas-movimentacoes .item-movimentacao .icone-movimentacao {
+    width: 32px;
+    height: 32px;
+    font-size: 0.875rem;
+  }
+  .dashboard #ultimas-movimentacoes .item-movimentacao .valor {
+    font-size: 0.8125rem;
+  }
+  .dashboard #ultimas-movimentacoes .item-movimentacao .detalhes {
+    font-size: 0.6875rem;
   }
 
   /* Login */
@@ -1488,7 +1727,7 @@ nav a[data-rota][aria-current="page"] {
     margin-left: auto;
   }
 
-  /* Cabeçalho do Dashboard - Botão ao lado do título */
+  /* Cabeçalho do Dashboard - apenas título e subtítulo (sem botão) */
   .page-header {
     display: flex;
     justify-content: space-between;
@@ -1505,21 +1744,26 @@ nav a[data-rota][aria-current="page"] {
     color: var(--text-secondary);
   }
 
-  .page-header .container-acao {
-    display: block;
-    width: auto;
-    margin-bottom: 0;
-  }
-
   /* Grid de Indicadores - Mais espaçamento */
   .indicadores-grid {
     grid-template-columns: repeat(4, 1fr);
     gap: 24px;
-    margin-bottom: 32px;
+    margin-bottom: 16px; /* Espaço até o botão */
   }
   .card-indicador {
     padding: 24px;
     align-items: flex-start;
+  }
+
+  /* Botão Nova Movimentação no desktop: alinhado à direita, largura automática, abaixo da grade */
+  .dashboard-nova-movimentacao {
+    display: flex;
+    justify-content: flex-end;
+    width: 100%;
+    margin-bottom: 16px; /* Espaço até o card de alerta */
+  }
+  .dashboard-nova-movimentacao .btn {
+    width: auto;
   }
 
   /* Filtros (F02) */
@@ -1567,7 +1811,7 @@ nav a[data-rota][aria-current="page"] {
   .dashboard .valor-seta-container {
     display: flex;
     align-items: center;
-    gap: 16px;
+    gap: 8px;
     flex-shrink: 0;
   }
 }
@@ -1617,7 +1861,8 @@ nav a[data-rota][aria-current="page"] {
     border-top: 1px solid var(--border);
     justify-content: space-around;
     padding: 10px 0;
-    z-index: 1000;
+    padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+    z-index: 100; /* Abaixo do .toast-container (9999), acima do conteúdo */
   }
 
   .bottom-nav .nav-item {
@@ -1646,7 +1891,7 @@ nav a[data-rota][aria-current="page"] {
 
   /* Garante que o conteúdo não fique escondido atrás da barra inferior */
   main {
-    padding-bottom: 80px;
+    padding-bottom: calc(var(--bottom-nav-altura) + env(safe-area-inset-bottom, 0px) + 24px);
   }
 }
 
