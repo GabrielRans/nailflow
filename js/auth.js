@@ -412,13 +412,17 @@ export async function inicializarAuth() {
  * Busca estudio_id e atualiza estado, disparando eventos apropriados
  */
 async function processarLoginAsync(sessao, usuario) {
-  try {
-    // Deduplicação: ignora se já processou este userId (evita INITIAL_SESSION + getSession duplicados)
-    if (estadoAuth._ultimoUserIdProcessado === usuario.id) {
-      console.log('[Auth] Login duplicado ignorado para userId:', usuario.id);
-      return;
-    }
+  // Deduplicação SÍNCRONA: checa e marca ANTES de qualquer await
+  // Evita que chamadas concorrentes (getSession + INITIAL_SESSION + SIGNED_IN) processem o mesmo login
+  if (estadoAuth._ultimoUserIdProcessado === usuario.id) {
+    console.log('[Auth] Login duplicado ignorado para userId:', usuario.id);
+    return;
+  }
 
+  // Marca como "em processamento" para bloquear outras chamadas concorrentes para o mesmo userId
+  estadoAuth._ultimoUserIdProcessado = usuario.id;
+
+  try {
     // Buscar estudio_id vinculado a este usuário
     const estudioId = await buscarEstudioIdDoUsuario(usuario.id);
 
@@ -426,9 +430,6 @@ async function processarLoginAsync(sessao, usuario) {
     const autorizado = !!estudioId;
 
     atualizarEstadoAuth(sessao, usuario, estudioId);
-
-    // Marca como processado para deduplicação
-    estadoAuth._ultimoUserIdProcessado = usuario.id;
 
     console.log('[Auth] Login processado:', {
       userId: usuario.id,
@@ -462,6 +463,8 @@ async function processarLoginAsync(sessao, usuario) {
       dispararEvento('auth:pronto', { autenticado: true, autorizado: false });
     }
   } catch (err) {
+    // Em caso de erro, limpa a marca para permitir retry
+    estadoAuth._ultimoUserIdProcessado = null;
     console.error('[Auth] Erro ao processar login:', err);
     dispararEvento('auth:erro', {
       mensagem: 'Erro ao finalizar login. Recarregue a página.',
