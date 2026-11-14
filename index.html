@@ -258,7 +258,7 @@
         >
           <header class="page-header">
             <h2 id="movimentacao-titulo" tabindex="-1">Nova movimentação</h2>
-            <p>Registre uma entrada ou saída</p>
+            <p>Preencha os dados do lançamento</p>
           </header>
 
           <form id="form-movimentacao" class="form-movimentacao" novalidate>
@@ -276,7 +276,10 @@
                   aria-checked="false"
                   aria-label="Entrada (receita)"
                 >
-                  Entrada
+                  <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M18 15l-6-6-6 6"></path>
+                  </svg>
+                  <span>Entrada</span>
                 </button>
                 <button
                   type="button"
@@ -286,7 +289,10 @@
                   aria-checked="false"
                   aria-label="Saída (despesa)"
                 >
-                  Saída
+                  <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M6 9l6 6 6-6"></path>
+                  </svg>
+                  <span>Saída</span>
                 </button>
               </div>
               <!-- Select oculto para compatibilidade com JS existente -->
@@ -296,6 +302,28 @@
                 <option value="saida">Saída</option>
               </select>
               <p class="form-erro" id="tipo-erro" role="alert" hidden></p>
+            </div>
+
+            <div class="campo-descricao">
+              <label for="descricao">Descrição / serviço</label>
+              <input
+                type="text"
+                id="descricao"
+                name="descricao"
+                maxlength="100"
+                required
+                placeholder="Ex.: Alongamento"
+              >
+            </div>
+
+            <div class="campo-categoria">
+              <label for="categoria">Categoria</label>
+              <select id="categoria" name="categoria" required>
+                <option value="">Selecione</option>
+                <option value="atendimento">Atendimento</option>
+                <option value="material">Material</option>
+                <option value="outro">Outro</option>
+              </select>
             </div>
 
             <div class="campo-valor">
@@ -311,28 +339,6 @@
               >
             </div>
 
-            <div class="campo-descricao">
-              <label for="descricao">Descrição</label>
-              <input
-                type="text"
-                id="descricao"
-                name="descricao"
-                maxlength="100"
-                required
-                placeholder="Ex: Atendimento unhas gel"
-              >
-            </div>
-
-            <div class="campo-categoria">
-              <label for="categoria">Categoria</label>
-              <select id="categoria" name="categoria" required>
-                <option value="">Selecione</option>
-                <option value="atendimento">Atendimento</option>
-                <option value="material">Material</option>
-                <option value="outro">Outro</option>
-              </select>
-            </div>
-
             <div class="campo-data">
               <label for="data">Data</label>
               <input
@@ -344,19 +350,19 @@
             </div>
 
             <div class="campo-observacao">
-              <label for="observacao">Observação</label>
+              <label for="observacao">Observações (opcional)</label>
               <textarea
                 id="observacao"
                 name="observacao"
                 rows="3"
                 maxlength="300"
-                placeholder="Detalhes opcionais..."
+                placeholder="Adicionar observação"
               ></textarea>
             </div>
 
             <div class="acoes-form">
               <button type="submit" class="btn btn--primario">Salvar</button>
-              <button type="button" class="btn btn--secundario" id="btn-cancelar-movimentacao">Cancelar</button>
+              <button type="button" class="btn btn--cancelar" id="btn-cancelar-movimentacao">Cancelar</button>
             </div>
           </form>
         </section>

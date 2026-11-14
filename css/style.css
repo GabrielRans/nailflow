@@ -1890,6 +1890,18 @@ nav a[data-rota][aria-current="page"] {
   main {
     padding-bottom: 80px;
   }
+
+  /* Esconde bottom-nav nas telas de formulário (movimentacao e cadastro-material) */
+  /* Usa :has() para detectar qual section está visível (sem hidden) */
+  #app-logado:has(section[data-tela="movimentacao"]:not([hidden])),
+  #app-logado:has(section[data-tela="cadastro-material"]:not([hidden])) {
+    .bottom-nav {
+      display: none !important;
+    }
+    main {
+      padding-bottom: 24px !important;
+    }
+  }
 }
 
 @media (min-width: 768px) {
