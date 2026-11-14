@@ -10,9 +10,13 @@
    --primary-hover: #63344A (hover do primário)
    --primary-active: #4F2A3A (active do primário)
    --border: #E1E5EA (bordas)
-   --error-bg: #FCECEF (fundo erro)
-   --error-border: #D65D68 (borda erro)
-   --error-text: #D65D68 (texto erro)
+   --danger: #DC2626 (vermelho perigo/erro/saída)
+   --danger-strong: #991B1B (vermelho forte para texto sobre branco)
+   --danger-bg: #FEF2F2 (fundo perigo)
+   --danger-border: #FECACA (borda perigo)
+   --error-bg: var(--danger-bg) (alias compatibilidade)
+   --error-border: var(--danger-border) (alias compatibilidade)
+   --error-text: var(--danger) (alias compatibilidade)
    --focus: #7C435C (foco visível)
 */
 
@@ -27,9 +31,15 @@
   --primary-active: #4F2A3A;
   --border: #E1E5EA;
   --border-focus: #7C435C;
-  --error-bg: #FCECEF;
-  --error-border: #D65D68;
-  --error-text: #D65D68;
+  /* Danger tokens (erro/perigo/saída) */
+  --danger: #DC2626;
+  --danger-strong: #991B1B;
+  --danger-bg: #FEF2F2;
+  --danger-border: #FECACA;
+  /* Aliases de erro apontando para danger (compatibilidade) */
+  --error-bg: var(--danger-bg);
+  --error-border: var(--danger-border);
+  --error-text: var(--danger);
   --google-bg: #FFFFFF;
   --google-border: #E1E5EA;
   --google-hover: #F5F6F8;
@@ -39,6 +49,14 @@
   --radius: 12px;
   --radius-sm: 8px;
   --transition: 160ms ease;
+}
+
+[data-theme="dark"] {
+  /* Danger tokens dark mode */
+  --danger: #EF4444;
+  --danger-strong: #FCA5A5;
+  --danger-bg: #3D1A1A;
+  --danger-border: #7A2E2E;
 }
 
 /* Transição suave para componentes */

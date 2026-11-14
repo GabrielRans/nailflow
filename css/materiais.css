@@ -29,15 +29,15 @@
 }
 
 .materiais-feedback--erro {
-  background-color: #FEF2F2;
-  border: 1px solid #FECACA;
-  color: #991B1B;
+  background-color: var(--danger-bg);
+  border: 1px solid var(--danger-border);
+  color: var(--danger-strong);
 }
 
 [data-theme="dark"] .materiais-feedback--erro {
-  background-color: #3D1A1A;
-  border-color: #7A2E2E;
-  color: #FCA5A5;
+  background-color: var(--danger-bg);
+  border-color: var(--danger-border);
+  color: var(--danger-strong);
 }
 
 /* -----------------------------------------------------------------------------
@@ -245,9 +245,9 @@
 }
 
 .material-card__badge--reposicao {
-  background-color: #FEF2F2;
-  border: 1px solid #FECACA;
-  color: #991B1B;
+  background-color: var(--danger-bg);
+  border: 1px solid var(--danger-border);
+  color: var(--danger-strong);
 }
 
 [data-theme="dark"] .material-card__badge--ok {
@@ -257,9 +257,9 @@
 }
 
 [data-theme="dark"] .material-card__badge--reposicao {
-  background-color: #3D1A1A;
-  border-color: #7A2E2E;
-  color: #FCA5A5;
+  background-color: var(--danger-bg);
+  border-color: var(--danger-border);
+  color: var(--danger-strong);
 }
 
 /* Quantidade e Mínimo */
@@ -292,12 +292,12 @@
 }
 
 .material-card__metrica-valor--alerta {
-  color: #DC2626;
+  color: var(--danger);
   font-weight: 600;
 }
 
 [data-theme="dark"] .material-card__metrica-valor--alerta {
-  color: #F87171;
+  color: var(--danger);
 }
 
 /* Ações do card (Editar / Atualizar) */
@@ -482,7 +482,7 @@
 }
 
 .campo-obrigatorio {
-  color: var(--error-text, #D65D68);
+  color: var(--error-text);
   margin-left: 2px;
 }
 
@@ -526,7 +526,7 @@
 
 .input-com-icone input[aria-invalid="true"],
 .input-com-icone select[aria-invalid="true"] {
-  border-color: #DC2626;
+  border-color: var(--danger);
 }
 
 .input-com-icone input::placeholder {
@@ -543,14 +543,14 @@
 
 .form-material .form-erro-campo {
   margin: 2px 0 0;
-  color: #DC2626;
+  color: var(--danger);
   font-size: 0.8125rem;
   font-weight: 500;
   line-height: 1.3;
 }
 
 [data-theme="dark"] .form-material .form-erro-campo {
-  color: #F87171;
+  color: var(--danger);
 }
 
 /* Ações do formulário */
