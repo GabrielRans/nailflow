@@ -1189,6 +1189,33 @@ nav a[data-rota][aria-current="page"] {
   border-radius: 4px;
 }
 
+/* Mensagem de feedback da recuperação de senha */
+.recuperar-senha-msg {
+  margin: 8px 0 0;
+  padding: 10px 14px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  font-size: 0.875rem;
+  text-align: left;
+  display: none;
+}
+
+.recuperar-senha-msg:not([hidden]) {
+  display: block;
+}
+
+.recuperar-senha-msg--sucesso {
+  border-color: #A7F3D0;
+  background: #ECFDF5;
+  color: #065F46;
+}
+
+.recuperar-senha-msg--erro {
+  border-color: var(--error-border);
+  background: var(--error-bg);
+  color: var(--error-text);
+}
+
 /* Divisor "ou" */
 .divisor {
   display: flex;
