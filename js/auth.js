@@ -1,6 +1,6 @@
 /**
  * Módulo de Autenticação - NailFlow
- * Gerencia login Google OAuth, logout, sessão e estado global via CustomEvents
+ * Gerencia login por e-mail/senha, logout, sessão e estado global via CustomEvents
  *
  * Separação de responsabilidades:
  * - AUTENTICAÇÃO (AuthN): Identidade verificada via Google OAuth (sessão válida, usuário conhecido)
@@ -142,35 +142,6 @@ function marcarInicializado(autenticado = false, autorizado = false, emRedefinic
 // =============================================================================
 // API Pública
 // =============================================================================
-
-/**
- * Inicia o fluxo de login com Google OAuth
- * Redireciona para o Google; ao retornar, onAuthStateChange trata a sessão
- */
-export async function loginComGoogle() {
-  try {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        // Redireciona dinamicamente para o domínio atual (produção ou localhost)
-        // Evita redirecionamento fixo para localhost em produção (Cloudflare Pages)
-        redirectTo: window.location.origin,
-        // Solicita acesso ao email e perfil
-        scopes: 'email profile',
-      },
-    });
-
-    if (error) throw error;
-    // Não retorna aqui - o navegador redireciona para Google
-  } catch (err) {
-    console.error('[Auth] Erro ao iniciar login Google:', err);
-    dispararEvento('auth:erro', {
-      mensagem: 'Não foi possível iniciar o login com Google. Tente novamente.',
-      erro: err
-    });
-    throw err;
-  }
-}
 
 /**
  * Realiza login com email e senha
