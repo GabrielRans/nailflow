@@ -30,6 +30,10 @@
   --error-bg: #FCECEF;
   --error-border: #D65D68;
   --error-text: #D65D68;
+  --success: #10B981;
+  --success-bg: #ECFDF5;
+  --success-border: #A7F3D0;
+  --success-text: #065F46;
   --google-bg: #FFFFFF;
   --google-border: #E1E5EA;
   --google-hover: #F5F6F8;
@@ -921,6 +925,55 @@ nav a[data-rota][aria-current="page"] {
 
 .form-erro:not([hidden]) {
   display: block;
+}
+
+/* Requisitos de senha (formulário redefinir senha) */
+.senha-requisitos {
+  list-style: none;
+  padding: 0;
+  margin: 8px 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.senha-req {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: color var(--transition);
+  position: relative;
+  padding-left: 20px;
+}
+
+.senha-req::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--text-secondary);
+  border-radius: 3px;
+  transition: border-color var(--transition), background-color var(--transition);
+}
+
+.senha-req--ok {
+  color: var(--success-text);
+}
+
+.senha-req--ok::before {
+  content: "✓";
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-color: var(--success);
+  background-color: var(--success);
+  color: var(--card);
+  font-size: 0.625rem;
+  font-weight: 700;
+  line-height: 1;
 }
 
 /* Botão Entrar */
