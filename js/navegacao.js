@@ -621,6 +621,13 @@ function inicializarAuthListeners() {
     // Mostra tela de redefinição de senha
     alternarVisibilidadeApp(false, true);
     window.location.hash = "#redefinir-senha";
+
+    // Limpar hash da URL se ainda contiver parâmetros de convite/recuperação
+    // Evita que um reload re-dispare o fluxo de convite
+    const hash = window.location.hash;
+    if (hash.includes('type=invite') || hash.includes('type=recovery') || hash.includes('access_token')) {
+      history.replaceState(null, '', window.location.pathname + '#redefinir-senha');
+    }
   });
 
   // Senha atualizada com sucesso
