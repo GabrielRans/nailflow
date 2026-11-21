@@ -441,7 +441,28 @@ function configurarRedefinirSenha() {
     });
   }
 
-  // Limpar erros ao digitar
+  // Função para validar requisitos de senha em tempo real
+  function validarRequisitosSenha(senha) {
+    const requisitos = {
+      minimo: senha.length >= 8,
+      maiuscula: /[A-Z]/.test(senha),
+      minuscula: /[a-z]/.test(senha),
+      digito: /[0-9]/.test(senha)
+    };
+
+    document.querySelectorAll('.senha-req').forEach(req => {
+      const tipo = req.dataset.req;
+      if (requisitos[tipo]) {
+        req.classList.add('senha-req--ok');
+      } else {
+        req.classList.remove('senha-req--ok');
+      }
+    });
+
+    return Object.values(requisitos).every(v => v);
+  }
+
+  // Limpar erros ao digitar + validação em tempo real dos requisitos
   [inputNovaSenha, inputConfirmarSenha].forEach(input => {
     if (input) {
       input.addEventListener("input", () => {
@@ -451,6 +472,11 @@ function configurarRedefinirSenha() {
         if (erroEl) erroEl.hidden = true;
         if (erroRedefinir) erroRedefinir.hidden = true;
         if (sucessoRedefinir) sucessoRedefinir.hidden = true;
+
+        // Validação em tempo real apenas para o campo de nova senha
+        if (input === inputNovaSenha) {
+          validarRequisitosSenha(input.value);
+        }
       });
     }
   });
@@ -502,6 +528,18 @@ function configurarRedefinirSenha() {
         erroConfirmarSenha.hidden = false;
       }
       inputConfirmarSenha?.setAttribute("aria-invalid", "true");
+      temErro = true;
+    }
+
+    // Validar requisitos de senha no submit
+    const requisitosOk = validarRequisitosSenha(novaSenha);
+    if (!requisitosOk) {
+      if (erroNovaSenha) {
+        erroNovaSenha.textContent = "A senha não atende aos requisitos mínimos.";
+        erroNovaSenha.hidden = false;
+      }
+      inputNovaSenha?.setAttribute("aria-invalid", "true");
+      inputNovaSenha?.focus();
       temErro = true;
     }
 
@@ -603,6 +641,13 @@ function inicializarAuthListeners() {
     // Mostra tela de redefinição de senha
     alternarVisibilidadeApp(false, true);
     window.location.hash = "#redefinir-senha";
+
+    // Limpar hash da URL se ainda contiver parâmetros de convite/recuperação
+    // Evita que um reload re-dispare o fluxo de convite
+    const hash = window.location.hash;
+    if (hash.includes('type=invite') || hash.includes('type=recovery') || hash.includes('access_token')) {
+      history.replaceState(null, '', window.location.pathname + '#redefinir-senha');
+    }
   });
 
   // Senha atualizada com sucesso

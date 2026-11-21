@@ -322,6 +322,17 @@ export async function inicializarAuth() {
       case 'SIGNED_IN':
         // Login bem-sucedido (após OAuth redirect)
         if (sessao?.user) {
+          // Verificar se é um convite (type=invite na URL hash)
+          // O Supabase processa o token de convite, cria sessão e dispara SIGNED_IN
+          // Mas deve mostrar o formulário de definição de senha, não abrir o app
+          const _hashParams = new URLSearchParams(window.location.hash.substring(1));
+          if (_hashParams.get('type') === 'invite') {
+            console.log('[Auth] Convite detectado no SIGNED_IN - disparando auth:password-recovery');
+            document.dispatchEvent(new CustomEvent('auth:password-recovery', {
+              detail: { sessao, usuario: sessao.user }
+            }));
+            return;
+          }
           processarLoginAsync(sessao, sessao.user);
         }
         break;
