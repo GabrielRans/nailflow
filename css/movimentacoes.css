@@ -277,9 +277,9 @@
 }
 
 .movimentacao__acao[aria-label^="Excluir movimentação"] {
-  border-color: #b91c1c;
-  background: #fef2f2;
-  color: #991b1b;
+  border-color: var(--danger-border);
+  background: var(--danger-bg);
+  color: var(--danger-strong);
 }
 
 .movimentacao__acao[aria-label^="Excluir movimentação"]::before {
@@ -293,7 +293,7 @@
 }
 
 .movimentacao__acao[aria-label^="Excluir movimentação"]:hover {
-  border-color: #991b1b;
+  border-color: var(--danger-strong);
   background: #fee2e2;
 }
 

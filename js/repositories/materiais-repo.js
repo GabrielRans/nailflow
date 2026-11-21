@@ -42,8 +42,8 @@ function rowParaMaterial(row) {
     quantidadeMinima: Number(row.quantidade_minima),
     estudio_id: row.estudio_id,
     usuario_id: row.usuario_id,
-    created_at: row.created_at,
-    updated_at: row.updated_at
+    criado_em: row.criado_em,
+    atualizado_em: row.atualizado_em
   };
 }
 
@@ -51,14 +51,12 @@ function rowParaMaterial(row) {
  * Converte objeto de domínio para linha do banco
  * @param {Object} material
  * @param {string} estudioId
- * @param {string} userId
  * @returns {Object}
  */
-function materialParaRow(material, estudioId, userId) {
+function materialParaRow(material, estudioId) {
   return {
     id: material.id,
     estudio_id: estudioId,
-    usuario_id: userId,
     nome: material.nome,
     quantidade_disponivel: material.quantidadeDisponivel,
     unidade: material.unidade,
@@ -71,7 +69,7 @@ function materialParaRow(material, estudioId, userId) {
  * @returns {Object} Repositório com métodos assíncronos
  */
 export async function criarMateriaisRepository() {
-  const { estudioId, userId } = await obterEstudioIdEUsuário();
+  const { estudioId } = await obterEstudioIdEUsuário();
   if (!estudioId) {
     throw new Error('Usuário não autenticado ou sem estúdio vinculado');
   }
@@ -83,7 +81,7 @@ export async function criarMateriaisRepository() {
      * @returns {Promise<void>}
      */
     async salvar(material) {
-      const row = materialParaRow(material, estudioId, userId);
+      const row = materialParaRow(material, estudioId);
 
       const { error } = await supabase
         .from(TABELA)
@@ -137,7 +135,8 @@ export async function criarMateriaisRepository() {
       const { data, error } = await supabase
         .from(TABELA)
         .update({
-          quantidade_disponivel: quantidade
+          quantidade_disponivel: quantidade,
+          atualizado_em: new Date().toISOString()
         })
         .eq('estudio_id', estudioId)
         .eq('id', id)
@@ -157,7 +156,7 @@ export async function criarMateriaisRepository() {
      * @returns {Promise<Object>} Material criado
      */
     async adicionar(material) {
-      const row = materialParaRow(material, estudioId, userId);
+      const row = materialParaRow(material, estudioId);
 
       const { data, error } = await supabase
         .from(TABELA)
@@ -180,7 +179,8 @@ export async function criarMateriaisRepository() {
         nome: dadosAtualizados.nome,
         quantidade_disponivel: dadosAtualizados.quantidadeDisponivel,
         unidade: dadosAtualizados.unidade,
-        quantidade_minima: dadosAtualizados.quantidadeMinima
+        quantidade_minima: dadosAtualizados.quantidadeMinima,
+        atualizado_em: new Date().toISOString()
       };
 
       const { error, count } = await supabase
@@ -200,15 +200,15 @@ export async function criarMateriaisRepository() {
      * @returns {Promise<boolean>}
      */
     async excluir(id) {
-      const { error, count } = await supabase
+      const { data, error } = await supabase
         .from(TABELA)
         .delete()
         .eq('estudio_id', estudioId)
         .eq('id', id)
-        .select('id', { count: 'exact', head: true });
+        .select('id');
 
       if (error) throw error;
-      return count > 0;
+      return (data?.length ?? 0) > 0;
     }
   };
 }

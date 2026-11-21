@@ -1,6 +1,6 @@
 /**
  * Módulo de Autenticação - NailFlow
- * Gerencia login Google OAuth, logout, sessão e estado global via CustomEvents
+ * Gerencia login por e-mail/senha, logout, sessão e estado global via CustomEvents
  *
  * Separação de responsabilidades:
  * - AUTENTICAÇÃO (AuthN): Identidade verificada via Google OAuth (sessão válida, usuário conhecido)
@@ -31,6 +31,8 @@ const estadoAuth = {
   autorizado: false,     // AuthZ: tem estudioId válido (vínculo com estúdio)
   // Fluxo de redefinição de senha
   emRedefinicaoSenha: false,
+  // Deduplicação: último userId processado com sucesso (limpo no logout)
+  _ultimoUserIdProcessado: null,
 };
 
 // Fallback síncrono para scripts clássicos (não ES modules)
@@ -114,6 +116,7 @@ function limparEstadoAuth() {
   estadoAuth.autenticado = false;
   estadoAuth.autorizado = false;
   estadoAuth.emRedefinicaoSenha = false;
+  estadoAuth._ultimoUserIdProcessado = null; // Limpa deduplicação para permitir novo login
 
   window.NailFlow.auth.sessao = null;
   window.NailFlow.auth.usuario = null;
@@ -139,35 +142,6 @@ function marcarInicializado(autenticado = false, autorizado = false, emRedefinic
 // =============================================================================
 // API Pública
 // =============================================================================
-
-/**
- * Inicia o fluxo de login com Google OAuth
- * Redireciona para o Google; ao retornar, onAuthStateChange trata a sessão
- */
-export async function loginComGoogle() {
-  try {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        // Redireciona dinamicamente para o domínio atual (produção ou localhost)
-        // Evita redirecionamento fixo para localhost em produção (Cloudflare Pages)
-        redirectTo: window.location.origin,
-        // Solicita acesso ao email e perfil
-        scopes: 'email profile',
-      },
-    });
-
-    if (error) throw error;
-    // Não retorna aqui - o navegador redireciona para Google
-  } catch (err) {
-    console.error('[Auth] Erro ao iniciar login Google:', err);
-    dispararEvento('auth:erro', {
-      mensagem: 'Não foi possível iniciar o login com Google. Tente novamente.',
-      erro: err
-    });
-    throw err;
-  }
-}
 
 /**
  * Realiza login com email e senha
@@ -420,6 +394,16 @@ export async function inicializarAuth() {
  * Busca estudio_id e atualiza estado, disparando eventos apropriados
  */
 async function processarLoginAsync(sessao, usuario) {
+  // Deduplicação SÍNCRONA: checa e marca ANTES de qualquer await
+  // Evita que chamadas concorrentes (getSession + INITIAL_SESSION + SIGNED_IN) processem o mesmo login
+  if (estadoAuth._ultimoUserIdProcessado === usuario.id) {
+    console.log('[Auth] Login duplicado ignorado para userId:', usuario.id);
+    return;
+  }
+
+  // Marca como "em processamento" para bloquear outras chamadas concorrentes para o mesmo userId
+  estadoAuth._ultimoUserIdProcessado = usuario.id;
+
   try {
     // Buscar estudio_id vinculado a este usuário
     const estudioId = await buscarEstudioIdDoUsuario(usuario.id);
@@ -461,6 +445,8 @@ async function processarLoginAsync(sessao, usuario) {
       dispararEvento('auth:pronto', { autenticado: true, autorizado: false });
     }
   } catch (err) {
+    // Em caso de erro, limpa a marca para permitir retry
+    estadoAuth._ultimoUserIdProcessado = null;
     console.error('[Auth] Erro ao processar login:', err);
     dispararEvento('auth:erro', {
       mensagem: 'Erro ao finalizar login. Recarregue a página.',

@@ -102,8 +102,57 @@
   outline-offset: 3px;
 }
 
+/* Botão Cancelar — contorno primário, fundo transparente */
+#form-movimentacao .btn--cancelar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  padding: 12px 20px;
+  border: 1px solid #7C435C;
+  border-radius: 12px;
+  background-color: transparent;
+  color: #7C435C;
+  font-family: inherit;
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.2;
+  cursor: pointer;
+  box-sizing: border-box;
+  transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease;
+}
+
+#form-movimentacao .btn--cancelar:hover {
+  background-color: color-mix(in srgb, #7C435C 10%, transparent);
+  border-color: #63344A;
+  color: #63344A;
+}
+
+#form-movimentacao .btn--cancelar:active {
+  background-color: color-mix(in srgb, #7C435C 15%, transparent);
+  border-color: #522B3D;
+  color: #522B3D;
+}
+
+#form-movimentacao .btn--cancelar:focus-visible {
+  outline: 3px solid #7C435C;
+  outline-offset: 3px;
+}
+
+/* Container das ações — garante que o último elemento não tenha margem inferior
+   e crie contexto de empilhamento próprio para ficar acima da bottom-nav */
+#form-movimentacao .acoes-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 0;
+  position: relative;
+  z-index: 1;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  #form-movimentacao button[type="submit"] {
+  #form-movimentacao button[type="submit"],
+  #form-movimentacao .btn--cancelar {
     transition: none;
   }
 }

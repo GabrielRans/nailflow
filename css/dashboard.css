@@ -47,7 +47,7 @@
 }
 
 .dashboard__card--despesas {
-  border-top-color: #b42318;
+  border-top-color: var(--danger-strong);
 }
 
 .dashboard__card--saldo {
@@ -82,7 +82,7 @@
 }
 
 .dashboard__card--despesas .dashboard__card-valor {
-  color: #b42318;
+  color: var(--danger-strong);
 }
 
 .dashboard__card--saldo .dashboard__card-valor {
