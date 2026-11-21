@@ -148,6 +148,14 @@
             </div>
           </header>
 
+          <!-- Botão Nova Movimentação (posicionado acima dos indicadores conforme o modelo visual F01) -->
+          <div class="container-acao dashboard-nova-movimentacao">
+            <a href="#nova-movimentacao" class="btn btn--primario">+ Nova movimentação</a>
+          </div>
+
+          <!-- Estado contextual do Dashboard (Vazio / Erro) -->
+          <div id="dashboard-estado" class="dashboard__estado" role="status" aria-live="polite" hidden></div>
+
           <!-- Grid de Indicadores -->
           <div class="indicadores-grid">
             <div class="card-indicador">
@@ -172,7 +180,7 @@
                 <strong class="valor" data-indicador="totalSaidas">R$ 0,00</strong>
               </div>
             </div>
-            <div class="card-indicador">
+            <div class="card-indicador card-indicador--saldo" id="card-indicador-saldo">
               <div class="icone" aria-hidden="true">
                 <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                   <line x1="18" y1="20" x2="18" y2="10"></line>
@@ -183,6 +191,7 @@
               <div class="info">
                 <span class="label">Resultado</span>
                 <strong class="valor" data-indicador="saldo">R$ 0,00</strong>
+                <span class="badge-saldo" id="badge-saldo" aria-hidden="true" hidden></span>
               </div>
             </div>
             <div class="card-indicador">
@@ -199,11 +208,6 @@
             </div>
           </div>
 
-          <!-- Botão Nova Movimentação (fora do page-header, após grid e antes do alerta) -->
-          <div class="container-acao dashboard-nova-movimentacao">
-            <a href="#nova-movimentacao" class="btn btn--primario">+ Nova movimentação</a>
-          </div>
-
           <!-- Alerta de Materiais -->
           <a
             href="#materiais"
@@ -218,10 +222,10 @@
               </svg>
             </div>
             <div class="texto-alerta">
-              <strong>Materiais</strong>
-              <span id="alerta-reposicao-texto"></span>
+              <strong id="alerta-reposicao-texto">1 material precisa de reposição</strong>
+              <span class="subtexto-alerta">Verificar estoque</span>
             </div>
-            <span class="seta-alerta" aria-hidden="true">></span>
+            <span class="seta-alerta" aria-hidden="true">&gt;</span>
           </a>
 
           <!-- Últimas movimentações -->
