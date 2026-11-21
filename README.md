@@ -1,84 +1,92 @@
 # NailFlow
 
-Aplicação web desenvolvida para auxiliar na gestão financeira e no controle de materiais de um empreendimento de Nail Art.
-
-## Tecnologias
-
-- HTML5
-- CSS3
-- JavaScript (ES Modules via CDN)
-- Supabase (PostgreSQL + Auth v2 + Realtime)
-- Web Storage API (apenas para testes - injeção de dependência)
+Aplicação web desenvolvida no projeto extensionista do curso de Análise e Desenvolvimento de Sistemas da UniEVANGÉLICA para auxiliar uma profissional autônoma de Nail Art na gestão financeira e no controle de materiais.
 
 ## Status
 
-Projeto em desenvolvimento.
+Projeto em desenvolvimento. As funcionalidades e os controles descritos neste documento devem ser considerados conforme o estado efetivamente implementado e validado; itens ainda não homologados estão identificados como limitações ou pendências.
 
-## Arquitetura de Persistência e Resiliência (Issues #32 e #36)
+## Tecnologias
 
-A integração com Supabase (Issue #36) substitui o armazenamento exclusivo em `localStorage` por um banco PostgreSQL gerenciado na nuvem, trazendo:
+- HTML5 e CSS3
+- JavaScript com ES Modules
+- Supabase: PostgreSQL e Auth
+- Cloudflare Pages para hospedagem
 
-- **Isolamento multi-tenant via RLS**: Cada estúdio acessa apenas seus dados através de políticas Row Level Security vinculadas ao `auth.uid()` via tabela `usuarios` (link `usuario_id` → `estudio_id`).
-- **Autenticação OAuth (Google)**: Fluxo seguro com `detectSessionInUrl: true`, `autoRefreshToken: true` e persistência de sessão no `localStorage` do navegador. Redirecionamento dinâmico via `window.location.origin` (funciona em localhost e produção Cloudflare Pages).
-- **Resiliência e backup nativo (Issue #32)**: O PostgreSQL do Supabase provê backups automatizados com Point-in-Time Recovery (PITR) de 7 dias no plano gratuito, replicação síncrona e alta disponibilidade. **Nota**: O PITR permite restauração para qualquer segundo nos últimos 7 dias; backups completos diários são mantidos por 30 dias. Isso elimina o risco de perda de dados inerente ao `localStorage` (limpeza de cache, mudança de dispositivo, limites de armazenamento).
-- **API Dual (Sync/Async)**: 
-  - **Produção**: API exclusivamente assíncrona contra Supabase (sem fallback automático para localStorage)
-  - **Testes**: API síncrona via repositório em memória injetado (injeção de dependência), garantindo isolamento total entre testes
-- **Sem fallback silencioso**: Em produção, falhas de conexão/auth geram erro explícito na UI - não há escrita oculta em localStorage.
+O frontend utiliza o cliente JavaScript do Supabase. Não há backend Node.js próprio na arquitetura atual.
 
-## Autenticação e Autorização (Issue #36)
+## Arquitetura e dados
 
-### Separação AuthN / AuthZ
-- **Autenticação (AuthN)**: Identidade verificada via Google OAuth (sessão válida, usuário conhecido)
-- **Autorização (AuthZ)**: Acesso ao NailFlow requer vínculo com um estúdio (`estudioId` válido na tabela `usuarios`)
+O modelo de dados é organizado por estúdio. A entidade `estudios` representa o espaço de trabalho, e os registros operacionais são associados por `estudio_id`.
 
-### Fluxo de Eventos
-- `auth:authenticated` → AuthN OK (usuário logado, mas pode não ter estúdio)
-- `auth:login` → AuthN + AuthZ OK (usuário logado E tem estúdio vinculado) → app acessível
-- `auth:unauthorized` → AuthN OK, mas sem AuthZ (sem estúdio) → redireciona para login com mensagem
-- `auth:logout` → Limpa estado completo
-- `auth:erro` → Erro de autenticação/autorização
-- `auth:pronto` → Estado inicial após init (`{ autenticado, autorizado }`)
-- `auth:token-refresh` → Token renovado automaticamente
+As tabelas identificadas no banco são:
 
-### Rotas Protegidas
-Todas as rotas (`dashboard`, `financeiro`, `movimentacao`, `materiais`, `cadastro-material`) exigem **AMBAS** condições:
-1. `window.NailFlow.auth.autenticado === true` (AuthN)
-2. `window.NailFlow.auth.autorizado === true` (AuthZ = estudioId válido)
+- `estudios`: cadastro dos estúdios.
+- `usuarios`: vínculo entre a identidade autenticada e o estúdio, incluindo o papel do usuário.
+- `materiais`: materiais e quantidades disponíveis, associados ao estúdio por `estudio_id`.
+- `movimentacoes`: movimentações financeiras, associadas ao estúdio e ao usuário responsável.
 
-## OAuth - Configuração Google Cloud Console
+A tabela `materiais` não possui coluna `usuario_id`; seu vínculo de isolamento é feito por `estudio_id`. A view `materiais_baixo_estoque` apresenta materiais cuja quantidade disponível é menor ou igual à quantidade mínima.
 
-1. Criar projeto no [Google Cloud Console](https://console.cloud.google.com/)
-2. APIs & Services → Credentials → Create Credentials → OAuth Client ID
-3. Application type: Web application
-4. Authorized JavaScript origins: `https://seu-dominio.pages.dev` (produção) + `http://localhost:3000` (dev)
-5. Authorized redirect URIs: `https://seu-dominio.pages.dev/` (produção) + `http://localhost:3000/` (dev)
-   - **Nota**: O código usa `redirectTo: window.location.origin` dinamicamente, funcionando em qualquer domínio
-6. Copiar Client ID e Client Secret para o Supabase Dashboard → Authentication → Providers → Google
+## Autenticação e autorização
 
-## Limitações Conhecidas
+A autenticação configurada no fluxo atual é por e-mail e senha, utilizando Supabase Auth.
 
-1. **Primeiro acesso**: Usuários autenticados sem vínculo na tabela `usuarios` recebem `auth:unauthorized` - administrador deve vincular manualmente no Supabase Dashboard
-2. **Offline**: Não há suporte a modo offline - requer conexão para operações CRUD
-3. **RLS e Service Role**: Operações administrativas (criar vínculo usuário-estúdio) requerem Service Role Key (não exposta no frontend)
-4. **Testes de integração**: Requerem Supabase local ou projeto de teste configurado - testes atuais usam repositório em memória
-5. **Navegadores antigos**: Requer suporte a ES Modules, `crypto.randomUUID`, `CustomEvent` (navegadores modernos OK)
+Autenticação e autorização são etapas distintas:
+
+- **Autenticação:** confirma a identidade do usuário por meio da sessão do Supabase Auth.
+- **Autorização:** o usuário precisa possuir vínculo válido com um estúdio na tabela `usuarios` para acessar os dados da aplicação.
+
+O login, portanto, não deve conceder acesso automaticamente a qualquer conta autenticada. O vínculo com o estúdio e as políticas de Row Level Security (RLS) determinam o acesso permitido.
+
+O modelo atual contempla uma proprietária inicial e mantém a associação dos registros ao estúdio. O gerenciamento de funcionários e a ampliação do acesso são evoluções futuras, não parte do escopo inicial.
+
+## Segurança e isolamento
+
+A proteção dos dados é baseada em PostgreSQL Row Level Security (RLS), com políticas nas tabelas `estudios`, `materiais`, `movimentacoes` e `usuarios`.
+
+As operações permitidas também dependem dos privilégios SQL concedidos aos papéis do banco. A presença de RLS, isoladamente, não substitui a revisão desses privilégios.
+
+Uma auditoria de metadados realizada em 20/11/2026 identificou concessões de privilégios que precisam ser revisadas, além de pontos de hardening em funções `SECURITY DEFINER`. A validação funcional do isolamento entre estúdios e a correção desses achados estão pendentes na Issue #55. Os resultados da inspeção de catálogos não equivalem a um pentest nem comprovam, por si só, exploração pela API.
+
+A chave pública do Supabase utilizada pelo cliente pode estar no frontend conforme o modelo de acesso do Supabase e desde que as políticas e privilégios estejam corretamente configurados. **Chaves secretas, como `service_role`, senhas e credenciais administrativas não devem ser incluídas no código frontend nem versionadas.**
+
+## Persistência, falhas e recuperação
+
+Os dados operacionais são persistidos no PostgreSQL do Supabase. A aplicação não deve recorrer silenciosamente a armazenamento local como substituto de persistência em produção.
+
+A estratégia de backup e recuperação ainda precisa ser definida, documentada e testada. Não se deve considerar como garantidos, neste projeto, PITR, backups automáticos ou prazos específicos de retenção no plano gratuito do Supabase. Consulte a Issue #32 para o planejamento de backup e recuperação.
+
+## Limitações e pendências conhecidas
+
+- A validação funcional do isolamento RLS entre estúdios ainda está pendente.
+- A revisão dos privilégios SQL e das funções `SECURITY DEFINER` está em andamento na Issue #55.
+- O fluxo de recuperação de senha depende da configuração e homologação do envio de e-mails; não deve ser considerado homologado até a realização dos testes.
+- Não há suporte offline confirmado; as operações dependem de conectividade com os serviços utilizados.
+- A estratégia de backup e restauração ainda não foi homologada.
+- A homologação com a parceira e em dispositivos móveis deve ser registrada como evidência própria; não é presumida pela existência de testes automatizados.
 
 ## Deploy
 
-Configurado para **Cloudflare Pages** com headers de segurança em `_headers`:
+A aplicação está hospedada no Cloudflare Pages.
 
-- `X-Frame-Options: DENY` — previne clickjacking
-- `X-Content-Type-Options: nosniff` — previne MIME sniffing
-- `Referrer-Policy: strict-origin-when-cross-origin` — controle de informação de referência
+Os headers de segurança configurados no arquivo `_headers` incluem:
+
+- `X-Frame-Options: DENY`
+- `X-Content-Type-Options: nosniff`
+- `Referrer-Policy: strict-origin-when-cross-origin`
+
+A política de Content Security Policy (CSP) permanece sujeita a revisão.
 
 ## Testes
 
-```bash
-npm test           # Executa todos os testes (Node.js native test runner)
-npm run test:watch # Modo watch
-```
+Os testes automatizados do projeto são executados com o runner nativo de testes do Node.js. Consulte o `package.json` para os comandos disponíveis e a estrutura `test/` para os casos existentes.
 
-- Testes unitários: `test/app.test.js` (financeiro), `test/materiais.test.js` (materiais)
-- Isolamento total via `vm` contexts + repositórios em memória injetados
-- Sem dependência de Supabase/localStorage nos testes
+A existência de testes unitários não substitui testes de integração com Supabase, testes de autorização/RLS, testes ponta a ponta, restauração de backup ou homologação com a parceira.
+
+## Issues relacionadas
+
+- [#32 — Backup e recuperação](https://github.com/GabrielRans/nailflow/issues/32)
+- [#33 — Testes de regressão e evidências](https://github.com/GabrielRans/nailflow/issues/33)
+- [#53 — Autenticação e recuperação de senha](https://github.com/GabrielRans/nailflow/issues/53)
+- [#55 — Privilégios PostgreSQL, funções SECURITY DEFINER e isolamento RLS](https://github.com/GabrielRans/nailflow/issues/55)
