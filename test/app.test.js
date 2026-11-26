@@ -898,3 +898,728 @@ describe("Auth - loginComEmail", () => {
     assert.equal(eventosUnauthorized.length, 0, "Não deve disparar auth:unauthorized com credenciais inválidas (erro é de AuthN, não AuthZ)");
   });
 });
+
+describe("Auth - Fluxo Especial (convite/recuperação de senha)", () => {
+  let eventosAuth;
+  let mockDocument;
+  let mockWindow;
+  let mockLocation;
+  let sharedSessionStorage;
+  let contexto;
+
+  // sessionStorage compartilhado para testar persistência pós-F5
+  sharedSessionStorage = {
+    _store: {},
+    getItem(chave) { return this._store[chave] ?? null; },
+    setItem(chave, valor) { this._store[chave] = valor; },
+    removeItem(chave) { delete this._store[chave]; },
+    clear() { this._store = {}; }
+  };
+
+  function criarContextoAuthComHash(hash = "") {
+    // Cada target (window, document) tem seu próprio registro de eventos independente
+    const mockDocumentEventos = {};
+    const mockWindowEventos = {};
+
+    mockDocument = {
+      _eventos: mockDocumentEventos,
+      dispatchEvent(evento) {
+        if (this._eventos[evento.type]) {
+          this._eventos[evento.type].forEach(cb => cb(evento));
+        }
+        return true;
+      },
+      addEventListener(tipo, callback) {
+        this._eventos[tipo] = this._eventos[tipo] || [];
+        this._eventos[tipo].push(callback);
+      },
+      removeEventListener(tipo, callback) {
+        if (this._eventos[tipo]) {
+          this._eventos[tipo] = this._eventos[tipo].filter(cb => cb !== callback);
+        }
+      },
+      querySelector() { return null; }
+    };
+
+    // Mock window.location com hash configurável
+    mockLocation = {
+      hash: hash,
+      pathname: "/",
+      origin: "http://localhost"
+    };
+
+    mockWindow = {
+      NailFlow: {},
+      _eventos: mockWindowEventos,
+      dispatchEvent(evento) {
+        if (this._eventos[evento.type]) {
+          this._eventos[evento.type].forEach(cb => cb(evento));
+        }
+        return true;
+      },
+      addEventListener(tipo, callback) {
+        this._eventos[tipo] = this._eventos[tipo] || [];
+        this._eventos[tipo].push(callback);
+      },
+      removeEventListener(tipo, callback) {
+        if (this._eventos[tipo]) {
+          this._eventos[tipo] = this._eventos[tipo].filter(cb => cb !== callback);
+        }
+      },
+      location: mockLocation,
+      history: {
+        replaceState: () => {},
+        pushState: () => {}
+      },
+      localStorage: {
+        _store: {},
+        getItem(chave) { return this._store[chave] ?? null; },
+        setItem(chave, valor) { this._store[chave] = valor; },
+        removeItem(chave) { delete this._store[chave]; },
+        clear() { this._store = {}; }
+      },
+      sessionStorage: sharedSessionStorage
+    };
+
+    const ctx = vm.createContext({
+      crypto: webcrypto,
+      window: mockWindow,
+      document: mockDocument,
+      CustomEvent: function(type, options = {}) {
+        this.type = type;
+        this.detail = options.detail;
+      },
+      console,
+      setTimeout,
+      clearTimeout,
+      URLSearchParams, // Necessário para isFluxoConviteOuRecovery()
+      sessionStorage: sharedSessionStorage, // Global sessionStorage para auth.js
+      // Mock do supabase
+      supabase: {
+        auth: {
+          onAuthStateChange: (callback) => {
+            // Armazena callback para poder disparar eventos manualmente nos testes
+            ctx._authStateCallback = callback;
+            return { data: { subscription: { unsubscribe: () => {} } } };
+          },
+          signInWithPassword: async ({ email, password }) => {
+            return { data: { user: null, session: null }, error: new Error('Invalid login credentials') };
+          },
+          getSession: async () => ({ data: { session: null } }),
+          signOut: async () => {
+            // Dispara callback SIGNED_OUT para simular logout real
+            if (ctx._authStateCallback) {
+              ctx._authStateCallback('SIGNED_OUT', null);
+            }
+            return { error: null };
+          },
+          updateUser: async () => ({ error: null })
+        }
+      }
+    });
+
+    // Carrega o código do auth.js no contexto
+    const codigoAuth = fs.readFileSync("js/auth.js", "utf8")
+      .replace("import { supabase } from './supabase-client.js';", "// supabase mockado no contexto")
+      .replace(/export\s+/g, "");
+
+    vm.runInContext(codigoAuth, ctx);
+
+    eventosAuth = [];
+    const tiposEventos = ['auth:login', 'auth:authenticated', 'auth:unauthorized', 'auth:logout', 'auth:erro', 'auth:pronto', 'auth:token-refresh', 'auth:password-recovery', 'auth:password-updated', 'auth:special-flow-abandoned'];
+    // auth.js usa dispararEvento() que dispara em window — listeners devem ser em window
+    tiposEventos.forEach(tipo => {
+      ctx.window.addEventListener(tipo, (e) => {
+        eventosAuth.push({ tipo, detail: e.detail });
+      });
+    });
+
+    // Aguarda inicialização (inicializarAuth é auto-invocado)
+    return new Promise(r => setTimeout(() => r(ctx), 50));
+  }
+
+  beforeEach(async () => {
+    // Limpa sessionStorage compartilhado antes de cada teste
+    sharedSessionStorage.clear();
+    contexto = await criarContextoAuthComHash("#dashboard"); // hash padrão limpo
+  });
+
+  it("detecta fluxo de convite (type=invite) no hash e define emRedefinicaoSenha", async () => {
+    contexto = await criarContextoAuthComHash("#type=invite&access_token=abc123");
+
+    // Verifica via window.NailFlow.auth (estado exposto publicamente)
+    assert.equal(contexto.window.NailFlow.auth.emRedefinicaoSenha, true, "window.NailFlow.auth.emRedefinicaoSenha deve ser true para invite");
+
+    // Verifica que auth:pronto foi disparado com autenticado=true, autorizado=false
+    // Nota: no teste o mock retorna session=null, mas fluxo especial preserva emRedefinicaoSenha=true
+    // auth:pronto será disparado com autenticado=false (sem sessão ainda)
+    const eventosPronto = eventosAuth.filter(e => e.tipo === 'auth:pronto');
+    assert.ok(eventosPronto.length > 0, "Deve disparar auth:pronto");
+    const ultimoPronto = eventosPronto[eventosPronto.length - 1];
+    // Com fluxo especial ativo mas sem sessão, autenticado=false, autorizado=false
+    assert.equal(ultimoPronto.detail.autenticado, false);
+    assert.equal(ultimoPronto.detail.autorizado, false);
+  });
+
+  it("detecta fluxo de recuperação (type=recovery) no hash e define emRedefinicaoSenha", async () => {
+    contexto = await criarContextoAuthComHash("#type=recovery&access_token=def456");
+
+    assert.equal(contexto.window.NailFlow.auth.emRedefinicaoSenha, true, "window.NailFlow.auth.emRedefinicaoSenha deve ser true para recovery");
+  });
+
+  it("NÃO define estado especial quando hash não tem type=invite nem type=recovery", async () => {
+    contexto = await criarContextoAuthComHash("#dashboard");
+
+    assert.equal(contexto.window.NailFlow.auth.emRedefinicaoSenha, false, "emRedefinicaoSenha deve ser false para hash normal");
+  });
+
+  it("guards funcionam mesmo APÓS hash ser limpo (simula navegacao.js limpando hash)", async () => {
+    // Inicia COM hash de convite
+    contexto = await criarContextoAuthComHash("#type=invite&access_token=abc123");
+
+    // Verifica estado inicial via window.NailFlow.auth
+    assert.equal(contexto.window.NailFlow.auth.emRedefinicaoSenha, true);
+
+    // Simula navegacao.js limpando o hash (como faz em auth:password-recovery listener)
+    mockLocation.hash = "#redefinir-senha";
+
+    // Simula processarLoginAsync sendo chamado DEPOIS da limpeza do hash
+    // (ex: INITIAL_SESSION disparando após hash limpo)
+    const sessaoMock = { user: { id: "user-123", email: "test@test.com" } };
+    await contexto.processarLoginAsync(sessaoMock, sessaoMock.user);
+
+    // O guard deve ter impedido o processamento (não deve ter disparado auth:login)
+    const eventosLogin = eventosAuth.filter(e => e.tipo === 'auth:login');
+    assert.equal(eventosLogin.length, 0, "processarLoginAsync não deve processar login quando fluxo especial está ativo, mesmo após hash limpo");
+  });
+
+  it("sessionStorage persiste intenção de navegação para sobreviver a F5 (novo contexto lê sessionStorage)", async () => {
+    // Primeira inicialização COM hash de convite
+    contexto = await criarContextoAuthComHash("#type=invite&access_token=abc123");
+
+    // Verifica que sessionStorage foi definido
+    const salvo = sharedSessionStorage.getItem('nailflow_fluxo_especial');
+    assert.equal(salvo, 'true', "sessionStorage deve guardar intenção de navegação");
+
+    // Simula F5: cria NOVO contexto com hash LIMPO (pós-limpeza pelo navegacao.js)
+    // mas MESMO sessionStorage (compartilhado)
+    const contexto2 = await criarContextoAuthComHash("#redefinir-senha");
+
+    // O novo contexto deve ler do sessionStorage e restaurar estado de navegação
+    assert.equal(contexto2.window.NailFlow.auth.emRedefinicaoSenha, true, "Após F5, emRedefinicaoSenha deve ser restaurado do sessionStorage (intenção de navegação)");
+  });
+
+  it("atualizarSenha limpa estado interno e sessionStorage", async () => {
+    // NOTA: Este teste usa mock de supabase.auth.updateUser que SEMPRE retorna sucesso.
+    // Em produção, atualizarSenha() REQUER uma sessão válida do Supabase (token de recuperação ativo).
+    // O sessionStorage NÃO substitui a validação do Supabase.
+    // Se não houver sessão válida, o Supabase retornará erro.
+    contexto = await criarContextoAuthComHash("#type=recovery&access_token=def456");
+
+    assert.equal(contexto.window.NailFlow.auth.emRedefinicaoSenha, true);
+    assert.equal(sharedSessionStorage.getItem('nailflow_fluxo_especial'), 'true');
+
+    // Chama atualizarSenha (exportada) que internamente chama limparFluxoEspecial
+    await contexto.atualizarSenha("novaSenha123");
+
+    // Verifica limpeza via window.NailFlow.auth
+    assert.equal(contexto.window.NailFlow.auth.emRedefinicaoSenha, false, "emRedefinicaoSenha deve ser false após atualizarSenha");
+
+    // Verifica sessionStorage limpo
+    assert.equal(sharedSessionStorage.getItem('nailflow_fluxo_especial'), null, "sessionStorage deve ser limpo após atualizarSenha");
+
+    // Verifica evento auth:password-updated disparado
+    const eventosUpdated = eventosAuth.filter(e => e.tipo === 'auth:password-updated');
+    assert.ok(eventosUpdated.length > 0, "Deve disparar auth:password-updated");
+    assert.equal(eventosUpdated[0].detail.sucesso, true);
+  });
+
+  it("logout limpa estado de fluxo especial", async () => {
+    contexto = await criarContextoAuthComHash("#type=invite&access_token=abc123");
+
+    assert.equal(contexto.window.NailFlow.auth.emRedefinicaoSenha, true);
+
+    // Simula logout
+    await contexto.logout();
+
+    // Verifica limpeza via window.NailFlow.auth
+    assert.equal(contexto.window.NailFlow.auth.emRedefinicaoSenha, false, "emRedefinicaoSenha deve ser false após logout");
+    assert.equal(sharedSessionStorage.getItem('nailflow_fluxo_especial'), null, "sessionStorage deve ser limpo após logout");
+  });
+
+  it("login convencional NÃO é bloqueado quando não há fluxo especial", async () => {
+    contexto = await criarContextoAuthComHash("#dashboard");
+
+    assert.equal(contexto.window.NailFlow.auth.emRedefinicaoSenha, false);
+
+    // Simula login bem-sucedido
+    const sessaoMock = { user: { id: "user-456", email: "user@test.com" } };
+    await contexto.processarLoginAsync(sessaoMock, sessaoMock.user);
+
+    // Como não há estudioId no mock (buscarEstudioIdDoUsuario retorna null),
+    // deve disparar auth:unauthorized (AuthN OK, AuthZ falhou)
+    // O importante: NÃO foi bloqueado pelo guard de fluxo especial
+    const eventosUnauthorized = eventosAuth.filter(e => e.tipo === 'auth:unauthorized');
+    assert.ok(eventosUnauthorized.length > 0, "Deve disparar auth:unauthorized (AuthN OK, sem estúdio vinculado)");
+    // Verifica que NÃO houve erro de "fluxo especial ativo" bloqueando
+    const eventosErro = eventosAuth.filter(e => e.tipo === 'auth:erro');
+    const errosFluxoEspecial = eventosErro.filter(e => e.detail.mensagem && e.detail.mensagem.includes('fluxo especial'));
+    assert.equal(errosFluxoEspecial.length, 0, "Não deve haver erro de fluxo especial bloqueando login convencional");
+  });
+
+  // =============================================================================
+  // NOVOS TESTES: Callbacks com sessão válida durante fluxo especial
+  // =============================================================================
+
+  it("INITIAL_SESSION com sessão válida NÃO processa login se fluxo especial ativo", async () => {
+    // Inicia COM hash de convite
+    contexto = await criarContextoAuthComHash("#type=invite&access_token=abc123");
+    assert.equal(contexto.window.NailFlow.auth.emRedefinicaoSenha, true);
+
+    // Simula INITIAL_SESSION com sessão válida (como se Supabase já tivesse processado o token)
+    const sessaoValida = { user: { id: "user-invite", email: "invite@test.com" } };
+    if (contexto._authStateCallback) {
+      contexto._authStateCallback('INITIAL_SESSION', sessaoValida);
+    }
+
+    // Aguarda processamento assíncrono
+    await new Promise(r => setTimeout(r, 50));
+
+    // Guard deve impedir processarLoginAsync - não deve disparar auth:login
+    const eventosLogin = eventosAuth.filter(e => e.tipo === 'auth:login');
+    assert.equal(eventosLogin.length, 0, "INITIAL_SESSION com sessão válida não deve processar login convencional quando fluxo especial ativo");
+
+    // Deve manter emRedefinicaoSenha=true
+    assert.equal(contexto.window.NailFlow.auth.emRedefinicaoSenha, true, "emRedefinicaoSenha deve permanecer true");
+
+    // Deve disparar auth:pronto com autenticado=true (tem sessão), autorizado=false
+    const eventosPronto = eventosAuth.filter(e => e.tipo === 'auth:pronto');
+    assert.ok(eventosPronto.length > 0, "Deve disparar auth:pronto");
+    const ultimoPronto = eventosPronto[eventosPronto.length - 1];
+    assert.equal(ultimoPronto.detail.autenticado, true, "auth:pronto deve ter autenticado=true (sessão existe)");
+    assert.equal(ultimoPronto.detail.autorizado, false, "auth:pronto deve ter autorizado=false (sem estudioId)");
+  });
+
+  it("SIGNED_IN com type=invite no hash NÃO processa login e dispara auth:password-recovery", async () => {
+    // Inicia COM hash de convite
+    contexto = await criarContextoAuthComHash("#type=invite&access_token=abc123");
+    assert.equal(contexto.window.NailFlow.auth.emRedefinicaoSenha, true);
+
+    // Simula SIGNED_IN com sessão válida (Supabase processou token de convite)
+    const sessaoValida = { user: { id: "user-invite", email: "invite@test.com" } };
+    if (contexto._authStateCallback) {
+      contexto._authStateCallback('SIGNED_IN', sessaoValida);
+    }
+
+    // Aguarda processamento
+    await new Promise(r => setTimeout(r, 50));
+
+    // Guard deve impedir processarLoginAsync
+    const eventosLogin = eventosAuth.filter(e => e.tipo === 'auth:login');
+    assert.equal(eventosLogin.length, 0, "SIGNED_IN não deve processar login convencional quando fluxo especial ativo");
+
+    // Deve manter emRedefinicaoSenha=true
+    assert.equal(contexto.window.NailFlow.auth.emRedefinicaoSenha, true);
+
+    // Deve disparar auth:password-recovery (não auth:login)
+    const eventosRecovery = eventosAuth.filter(e => e.tipo === 'auth:password-recovery');
+    assert.ok(eventosRecovery.length > 0, "Deve disparar auth:password-recovery para invite");
+    assert.equal(eventosRecovery[0].detail.sessao, sessaoValida);
+    assert.equal(eventosRecovery[0].detail.usuario, sessaoValida.user);
+  });
+
+  it("getSession com sessão válida NÃO processa login se fluxo especial ativo", async () => {
+    // Cria contexto COM sessionStorage de fluxo especial (simula pós-F5)
+    // e mock de getSession retornando sessão válida
+    sharedSessionStorage.setItem('nailflow_fluxo_especial', 'true');
+
+    // Cria mock de supabase com getSession retornando sessão válida
+    const mockDocument2 = {
+      _eventos: {},
+      dispatchEvent(evento) {
+        if (this._eventos[evento.type]) {
+          this._eventos[evento.type].forEach(cb => cb(evento));
+        }
+        return true;
+      },
+      addEventListener(tipo, callback) {
+        this._eventos[tipo] = this._eventos[tipo] || [];
+        this._eventos[tipo].push(callback);
+      },
+      removeEventListener(tipo, callback) {
+        if (this._eventos[tipo]) {
+          this._eventos[tipo] = this._eventos[tipo].filter(cb => cb !== callback);
+        }
+      },
+      querySelector() { return null; }
+    };
+
+    const mockLocation2 = {
+      hash: "#redefinir-senha",
+      pathname: "/",
+      origin: "http://localhost"
+    };
+
+    const mockWindow2 = {
+      NailFlow: {},
+      _eventos: {},
+      dispatchEvent(evento) {
+        if (this._eventos[evento.type]) {
+          this._eventos[evento.type].forEach(cb => cb(evento));
+        }
+        return true;
+      },
+      addEventListener(tipo, callback) {
+        this._eventos[tipo] = this._eventos[tipo] || [];
+        this._eventos[tipo].push(callback);
+      },
+      removeEventListener(tipo, callback) {
+        if (this._eventos[tipo]) {
+          this._eventos[tipo] = this._eventos[tipo].filter(cb => cb !== callback);
+        }
+      },
+      location: mockLocation2,
+      history: { replaceState: () => {}, pushState: () => {} },
+      localStorage: { _store: {}, getItem(k) { return this._store[k] ?? null; }, setItem(k, v) { this._store[k] = v; }, removeItem(k) { delete this._store[k]; }, clear() { this._store = {}; } },
+      sessionStorage: sharedSessionStorage
+    };
+
+    const eventosAuthGetSession = [];
+    const tiposEventos = ['auth:login', 'auth:authenticated', 'auth:unauthorized', 'auth:logout', 'auth:erro', 'auth:pronto', 'auth:token-refresh', 'auth:password-recovery', 'auth:password-updated', 'auth:special-flow-abandoned'];
+    tiposEventos.forEach(tipo => {
+      mockWindow2.addEventListener(tipo, (e) => {
+        eventosAuthGetSession.push({ tipo, detail: e.detail });
+      });
+    });
+
+    const ctx2 = vm.createContext({
+      crypto: webcrypto,
+      window: mockWindow2,
+      document: mockDocument2,
+      CustomEvent: function(type, options = {}) { this.type = type; this.detail = options.detail; },
+      console,
+      setTimeout,
+      clearTimeout,
+      URLSearchParams,
+      sessionStorage: sharedSessionStorage,
+      supabase: {
+        auth: {
+          onAuthStateChange: (callback) => {
+            ctx2._authStateCallback = callback;
+            return { data: { subscription: { unsubscribe: () => {} } } };
+          },
+          signInWithPassword: async ({ email, password }) => {
+            return { data: { user: null, session: null }, error: new Error('Invalid login credentials') };
+          },
+          // getSession retorna sessão válida — simula que o Supabase já tem sessão
+          getSession: async () => ({ data: { session: { user: { id: "user-getsession", email: "getsession@test.com" } } } }),
+          signOut: async () => { if (ctx2._authStateCallback) { ctx2._authStateCallback('SIGNED_OUT', null); } return { error: null }; },
+          updateUser: async () => ({ error: null })
+        }
+      }
+    });
+
+    // Carrega auth.js — inicializarAuth() será chamado e invocará getSession()
+    const codigoAuth = fs.readFileSync("js/auth.js", "utf8")
+      .replace("import { supabase } from './supabase-client.js';", "// supabase mockado no contexto")
+      .replace(/export\s+/g, "");
+    vm.runInContext(codigoAuth, ctx2);
+
+    // Aguarda processamento assíncrono (getSession + callback)
+    await new Promise(r => setTimeout(r, 50));
+
+    // Verifica que estado de fluxo especial foi restaurado do sessionStorage
+    assert.equal(ctx2.window.NailFlow.auth.emRedefinicaoSenha, true, "emRedefinicaoSenha deve ser true (restaurado do sessionStorage)");
+
+    // Guard deve impedir processarLoginAsync — não deve disparar auth:login
+    const eventosLogin = eventosAuthGetSession.filter(e => e.tipo === 'auth:login');
+    assert.equal(eventosLogin.length, 0, "getSession com sessão válida não deve processar login convencional quando fluxo especial ativo");
+
+    // Deve manter emRedefinicaoSenha=true
+    assert.equal(ctx2.window.NailFlow.auth.emRedefinicaoSenha, true, "emRedefinicaoSenha deve permanecer true");
+
+    // Deve disparar auth:pronto com autenticado=true (tem sessão), autorizado=false, emRedefinicaoSenha=true
+    const eventosPronto = eventosAuthGetSession.filter(e => e.tipo === 'auth:pronto');
+    assert.ok(eventosPronto.length > 0, "Deve disparar auth:pronto");
+    const ultimoPronto = eventosPronto[eventosPronto.length - 1];
+    assert.equal(ultimoPronto.detail.autenticado, true, "auth:pronto deve ter autenticado=true (sessão existe)");
+    assert.equal(ultimoPronto.detail.autorizado, false, "auth:pronto deve ter autorizado=false (sem estudioId)");
+    assert.equal(ultimoPronto.detail.emRedefinicaoSenha, true, "auth:pronto deve ter emRedefinicaoSenha=true");
+  });
+
+  // =============================================================================
+  // TESTE: Eventos disparados em window são recebidos por listeners em window
+  // =============================================================================
+
+  it("auth:password-recovery é disparado em window e recebido por listener em window (não document)", async () => {
+    // Cria contexto COM hash de convite
+    const contextoInvite = await criarContextoAuthComHash("#type=invite&access_token=abc123");
+
+    // Registra listener em document (não deve receber — auth.js dispara em window)
+    const eventosDocument = [];
+    const tiposEventos = ['auth:password-recovery'];
+    tiposEventos.forEach(tipo => {
+      contextoInvite.document.addEventListener(tipo, (e) => {
+        eventosDocument.push({ tipo, detail: e.detail });
+      });
+    });
+
+    // Registra listener em window (deve receber — auth.js usa dispararEvento -> window.dispatchEvent)
+    const eventosWindow = [];
+    tiposEventos.forEach(tipo => {
+      contextoInvite.window.addEventListener(tipo, (e) => {
+        eventosWindow.push({ tipo, detail: e.detail });
+      });
+    });
+
+    // Simula SIGNED_IN com sessão válida (trigger convite)
+    const sessaoValida = { user: { id: "user-window-test", email: "window@test.com" } };
+    if (contextoInvite._authStateCallback) {
+      contextoInvite._authStateCallback('SIGNED_IN', sessaoValida);
+    }
+
+    await new Promise(r => setTimeout(r, 50));
+
+    // Listener em window deve receber o evento
+    assert.ok(eventosWindow.length > 0, "Listener em window deve receber auth:password-recovery");
+    assert.equal(eventosWindow[0].detail.sessao, sessaoValida);
+    assert.equal(eventosWindow[0].detail.usuario, sessaoValida.user);
+
+    // Listener em document NÃO deve receber (auth.js dispara em window, não document)
+    assert.equal(eventosDocument.length, 0, "Listener em document NÃO deve receber auth:password-recovery (auth.js dispara em window)");
+  });
+
+  it("INITIAL_SESSION SEM sessão mas COM fluxo especial preserva emRedefinicaoSenha", async () => {
+    // Inicia COM hash de convite (define fluxo especial)
+    contexto = await criarContextoAuthComHash("#type=invite&access_token=abc123");
+    assert.equal(contexto.window.NailFlow.auth.emRedefinicaoSenha, true);
+
+    // Simula INITIAL_SESSION SEM sessão (Supabase ainda não processou o token)
+    if (contexto._authStateCallback) {
+      contexto._authStateCallback('INITIAL_SESSION', null);
+    }
+
+    await new Promise(r => setTimeout(r, 50));
+
+    // Deve preservar emRedefinicaoSenha=true
+    assert.equal(contexto.window.NailFlow.auth.emRedefinicaoSenha, true, "emRedefinicaoSenha deve permanecer true sem sessão mas com fluxo especial");
+
+    // Deve disparar auth:pronto com autenticado=false, autorizado=false, emRedefinicaoSenha=true
+    const eventosPronto = eventosAuth.filter(e => e.tipo === 'auth:pronto');
+    assert.ok(eventosPronto.length > 0, "Deve disparar auth:pronto");
+    const ultimoPronto = eventosPronto[eventosPronto.length - 1];
+    assert.equal(ultimoPronto.detail.autenticado, false, "auth:pronto deve ter autenticado=false (sem sessão)");
+    assert.equal(ultimoPronto.detail.autorizado, false, "auth:pronto deve ter autorizado=false");
+    assert.equal(ultimoPronto.detail.emRedefinicaoSenha, true, "auth:pronto deve ter emRedefinicaoSenha=true (fluxo especial ativo)");
+  });
+
+  it("INITIAL_SESSION SEM sessão e SEM fluxo especial marca como não autenticado", async () => {
+    contexto = await criarContextoAuthComHash("#dashboard");
+
+    // Simula INITIAL_SESSION sem sessão
+    if (contexto._authStateCallback) {
+      contexto._authStateCallback('INITIAL_SESSION', null);
+    }
+
+    await new Promise(r => setTimeout(r, 50));
+
+    // Deve marcar como inicializado mas não autenticado
+    const eventosPronto = eventosAuth.filter(e => e.tipo === 'auth:pronto');
+    assert.ok(eventosPronto.length > 0);
+    const ultimoPronto = eventosPronto[eventosPronto.length - 1];
+    assert.equal(ultimoPronto.detail.autenticado, false);
+    assert.equal(ultimoPronto.detail.autorizado, false);
+  });
+
+  // =============================================================================
+  // NOVOS TESTES: Abandono do fluxo especial
+  // =============================================================================
+
+  it("atualizarSenha com erro de token expirado abandona fluxo especial", async () => {
+    contexto = await criarContextoAuthComHash("#type=recovery&access_token=def456");
+
+    assert.equal(contexto.window.NailFlow.auth.emRedefinicaoSenha, true);
+    assert.equal(sharedSessionStorage.getItem('nailflow_fluxo_especial'), 'true');
+
+    // Mock updateUser para retornar erro de token expirado
+    const originalUpdateUser = contexto.supabase.auth.updateUser;
+    contexto.supabase.auth.updateUser = async () => ({
+      error: { message: 'session expired' }
+    });
+
+    try {
+      await contexto.atualizarSenha("novaSenha123");
+      assert.fail("Deveria ter lançado erro");
+    } catch (err) {
+      // Esperado
+    }
+
+    // Deve ter chamado abandonarFluxoEspecial (limpa estado + sessionStorage)
+    assert.equal(contexto.window.NailFlow.auth.emRedefinicaoSenha, false, "emRedefinicaoSenha deve ser false após token expirado");
+    assert.equal(sharedSessionStorage.getItem('nailflow_fluxo_especial'), null, "sessionStorage deve ser limpo após token expirado");
+
+    // Restaurar mock
+    contexto.supabase.auth.updateUser = originalUpdateUser;
+  });
+
+  it("loginComEmail abandona fluxo especial pendente", async () => {
+    // Inicia COM hash de convite (fluxo especial pendente)
+    contexto = await criarContextoAuthComHash("#type=invite&access_token=abc123");
+    assert.equal(contexto.window.NailFlow.auth.emRedefinicaoSenha, true);
+    assert.equal(sharedSessionStorage.getItem('nailflow_fluxo_especial'), 'true');
+
+    // Chama loginComEmail (simula usuário decidindo fazer login convencional)
+    // O mock signInWithPassword sempre falha, mas o abandonFluxoEspecial deve ter sido chamado ANTES
+    try {
+      await contexto.loginComEmail("test@test.com", "senha123");
+    } catch (err) {
+      // Esperado - mock retorna erro
+    }
+
+    // Verifica que fluxo especial foi abandonado
+    assert.equal(contexto.window.NailFlow.auth.emRedefinicaoSenha, false, "emRedefinicaoSenha deve ser false após iniciar login convencional");
+    assert.equal(sharedSessionStorage.getItem('nailflow_fluxo_especial'), null, "sessionStorage deve ser limpo após iniciar login convencional");
+  });
+
+  it("abandonarFluxoEspecial limpa estado e dispara evento", async () => {
+    contexto = await criarContextoAuthComHash("#type=invite&access_token=abc123");
+
+    assert.equal(contexto.window.NailFlow.auth.emRedefinicaoSenha, true);
+    assert.equal(sharedSessionStorage.getItem('nailflow_fluxo_especial'), 'true');
+
+    // Chama a função exposta para testes
+    await contexto.window.NailFlow.auth._abandonarFluxoEspecial('teste-manual');
+
+    // Verifica limpeza
+    assert.equal(contexto.window.NailFlow.auth.emRedefinicaoSenha, false, "emRedefinicaoSenha deve ser false");
+    assert.equal(sharedSessionStorage.getItem('nailflow_fluxo_especial'), null, "sessionStorage deve ser limpo");
+
+    // Verifica evento disparado
+    const eventosAbandon = eventosAuth.filter(e => e.tipo === 'auth:special-flow-abandoned');
+    assert.ok(eventosAbandon.length > 0, "Deve disparar auth:special-flow-abandoned");
+    assert.equal(eventosAbandon[0].detail.motivo, 'teste-manual');
+  });
+
+  // =============================================================================
+  // NOVOS TESTES: F5 com sessionStorage - verifica estado restaurado via auth:pronto
+  // =============================================================================
+
+  it("F5: sessionStorage restaura estado E auth:pronto inclui emRedefinicaoSenha", async () => {
+    // Primeira inicialização COM hash de convite
+    contexto = await criarContextoAuthComHash("#type=invite&access_token=abc123");
+
+    // Verifica que sessionStorage foi definido
+    assert.equal(sharedSessionStorage.getItem('nailflow_fluxo_especial'), 'true');
+
+    // Simula F5: cria NOVO contexto com hash LIMPO mas MESMO sessionStorage
+    // Precisamos registrar listeners ANTES de carregar auth.js (que auto-inicializa)
+    const mockDocument2 = {
+      _eventos: {},
+      dispatchEvent(evento) {
+        if (this._eventos[evento.type]) {
+          this._eventos[evento.type].forEach(cb => cb(evento));
+        }
+        return true;
+      },
+      addEventListener(tipo, callback) {
+        this._eventos[tipo] = this._eventos[tipo] || [];
+        this._eventos[tipo].push(callback);
+      },
+      removeEventListener(tipo, callback) {
+        if (this._eventos[tipo]) {
+          this._eventos[tipo] = this._eventos[tipo].filter(cb => cb !== callback);
+        }
+      },
+      querySelector() { return null; }
+    };
+
+    const mockLocation2 = {
+      hash: "#redefinir-senha",
+      pathname: "/",
+      origin: "http://localhost"
+    };
+
+    const mockWindow2 = {
+      NailFlow: {},
+      dispatchEvent: mockDocument2.dispatchEvent.bind(mockDocument2),
+      addEventListener: mockDocument2.addEventListener.bind(mockDocument2),
+      removeEventListener: mockDocument2.removeEventListener.bind(mockDocument2),
+      location: mockLocation2,
+      history: {
+        replaceState: () => {},
+        pushState: () => {}
+      },
+      localStorage: {
+        _store: {},
+        getItem(chave) { return this._store[chave] ?? null; },
+        setItem(chave, valor) { this._store[chave] = valor; },
+        removeItem(chave) { delete this._store[chave]; },
+        clear() { this._store = {}; }
+      },
+      sessionStorage: sharedSessionStorage
+    };
+
+    const eventosAuthF5 = [];
+    const tiposEventos = ['auth:pronto'];
+    tiposEventos.forEach(tipo => {
+      mockDocument2.addEventListener(tipo, (e) => {
+        eventosAuthF5.push({ tipo, detail: e.detail });
+      });
+    });
+
+    const ctx2 = vm.createContext({
+      crypto: webcrypto,
+      window: mockWindow2,
+      document: mockDocument2,
+      CustomEvent: function(type, options = {}) {
+        this.type = type;
+        this.detail = options.detail;
+      },
+      console,
+      setTimeout,
+      clearTimeout,
+      URLSearchParams,
+      sessionStorage: sharedSessionStorage,
+      supabase: {
+        auth: {
+          onAuthStateChange: (callback) => {
+            ctx2._authStateCallback = callback;
+            return { data: { subscription: { unsubscribe: () => {} } } };
+          },
+          signInWithPassword: async ({ email, password }) => {
+            return { data: { user: null, session: null }, error: new Error('Invalid login credentials') };
+          },
+          getSession: async () => ({ data: { session: null } }),
+          signOut: async () => {
+            if (ctx2._authStateCallback) {
+              ctx2._authStateCallback('SIGNED_OUT', null);
+            }
+            return { error: null };
+          },
+          updateUser: async () => ({ error: null })
+        }
+      }
+    });
+
+    // Carrega o código do auth.js no contexto (auto-inicializa e dispara evento)
+    const codigoAuth = fs.readFileSync("js/auth.js", "utf8")
+      .replace("import { supabase } from './supabase-client.js';", "// supabase mockado no contexto")
+      .replace(/export\s+/g, "");
+
+    vm.runInContext(codigoAuth, ctx2);
+
+    // Aguarda processamento assíncrono
+    await new Promise(r => setTimeout(r, 50));
+
+    // O novo contexto deve ler do sessionStorage e restaurar estado de navegação
+    assert.equal(ctx2.window.NailFlow.auth.emRedefinicaoSenha, true, "Após F5, emRedefinicaoSenha deve ser restaurado do sessionStorage");
+
+    // Deve ter disparado auth:pronto com emRedefinicaoSenha=true para a UI mostrar a tela
+    const eventosPronto = eventosAuthF5.filter(e => e.tipo === 'auth:pronto');
+    assert.ok(eventosPronto.length > 0, "Após F5, deve disparar auth:pronto");
+    const ultimoPronto = eventosPronto[eventosPronto.length - 1];
+    assert.equal(ultimoPronto.detail.emRedefinicaoSenha, true, "auth:pronto deve incluir emRedefinicaoSenha=true");
+    assert.equal(ultimoPronto.detail.autenticado, false, "auth:pronto deve ter autenticado=false (sem sessão)");
+    assert.equal(ultimoPronto.detail.autorizado, false, "auth:pronto deve ter autorizado=false");
+  });
+});

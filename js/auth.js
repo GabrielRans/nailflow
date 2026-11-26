@@ -19,6 +19,112 @@
 import { supabase } from './supabase-client.js';
 
 // =============================================================================
+// Helpers de Fluxo Especial (convite / recuperação de senha)
+// =============================================================================
+
+/**
+ * Verifica se a URL atual indica fluxo de convite ou recuperação de senha.
+ * Deve ser chamado ANTES de qualquer limpeza do hash.
+ * @returns {boolean}
+ */
+function isFluxoConviteOuRecovery() {
+  try {
+    const hash = window?.location?.hash?.substring(1);
+    if (!hash) return false;
+    const params = new URLSearchParams(hash);
+    const type = params.get('type');
+    return type === 'invite' || type === 'recovery';
+  } catch {
+    // Em ambientes sem window.location (ex: testes), assume fluxo normal
+    return false;
+  }
+}
+
+/**
+ * Verifica se já detectamos um fluxo especial (invite/recovery) nesta sessão.
+ * Esta variável é definida UMA VEZ na inicialização e NÃO depende do hash da URL.
+ * Isso permite que os guards funcionem mesmo após o hash ser limpo pelo navegacao.js.
+ * @returns {boolean}
+ */
+function isFluxoEspecialDetectado() {
+  return estadoAuth._fluxoEspecialDetectado === true;
+}
+
+/**
+ * Captura a intenção de fluxo especial (invite/recovery) na inicialização.
+ * - Define flag interna persistente (_fluxoEspecialDetectado)
+ * - Opcionalmente salva em sessionStorage para sobreviver a F5 (apenas navegação, NÃO autorização)
+ * - Deve ser chamado ANTES de qualquer processamento assíncrono que possa limpar o hash
+ */
+function capturarIntencaoFluxoEspecial() {
+  const fluxoEspecial = isFluxoConviteOuRecovery();
+  if (fluxoEspecial) {
+    console.log('[Auth] Fluxo especial detectado na inicialização (invite/recovery)');
+    estadoAuth._fluxoEspecialDetectado = true;
+    estadoAuth.emRedefinicaoSenha = true;
+    window.NailFlow.auth.emRedefinicaoSenha = true;
+
+    // Persistir apenas a INTENÇÃO DE NAVEGAÇÃO (não autorização) para sobreviver a F5
+    // Isso permite que, após reload, a UI saiba mostrar a tela de redefinição de senha
+    // O Supabase ainda precisa validar o token/sessão - o sessionStorage NÃO substitui isso
+    try {
+      sessionStorage.setItem('nailflow_fluxo_especial', 'true');
+    } catch {
+      // Ignorar erros de sessionStorage (ex: navegação privada)
+    }
+  } else {
+    // Verificar se há intenção salva em sessionStorage (após F5)
+    // Só usar isso para DECIDIR QUAL TELA MOSTRAR, nunca para autorizar
+    try {
+      const salvo = sessionStorage.getItem('nailflow_fluxo_especial');
+      if (salvo === 'true') {
+        console.log('[Auth] Intenção de fluxo especial restaurada do sessionStorage (pós-F5)');
+        estadoAuth._fluxoEspecialDetectado = true;
+        estadoAuth.emRedefinicaoSenha = true;
+        window.NailFlow.auth.emRedefinicaoSenha = true;
+        // NÃO disparar auth:password-recovery aqui — pode acontecer antes dos listeners do navegacao.js
+        // O estado será refletido via auth:pronto (que inclui emRedefinicaoSenha)
+        // e o PASSWORD_RECOVERY real do Supabase disparará o evento quando processar o token
+      }
+    } catch {
+      // Ignorar
+    }
+  }
+}
+
+/**
+ * Limpa o estado de fluxo especial (após sucesso da redefinição de senha, logout, etc.)
+ * Remove flag interna e sessionStorage.
+ */
+function limparFluxoEspecial() {
+  estadoAuth._fluxoEspecialDetectado = false;
+  estadoAuth.emRedefinicaoSenha = false;
+  window.NailFlow.auth.emRedefinicaoSenha = false;
+  try {
+    sessionStorage.removeItem('nailflow_fluxo_especial');
+  } catch {
+    // Ignorar
+  }
+}
+
+/**
+ * Limpa o estado de fluxo especial por ABANDONO do usuário.
+ * Diferente de limparFluxoEspecial(), esta função é chamada quando o usuário
+ * sai do fluxo sem concluir (ex: navega para outra tela, link expirado, login convencional).
+ * NÃO deve ser chamada enquanto o fluxo especial ainda estiver sendo processado pelo Supabase.
+ */
+function abandonarFluxoEspecial(motivo) {
+  if (!estadoAuth._fluxoEspecialDetectado) return;
+
+  console.log('[Auth] Fluxo especial abandonado:', motivo);
+  limparFluxoEspecial();
+
+  // Dispara evento para UI saber que saiu do fluxo de redefinição
+  // (ex: navegacao.js pode redirecionar para login se necessário)
+  dispararEvento('auth:special-flow-abandoned', { motivo });
+}
+
+// =============================================================================
 // Estado Global Reactivo (via window.NailFlow.auth para acesso síncrono)
 // =============================================================================
 
@@ -31,6 +137,8 @@ const estadoAuth = {
   autorizado: false,     // AuthZ: tem estudioId válido (vínculo com estúdio)
   // Fluxo de redefinição de senha
   emRedefinicaoSenha: false,
+  // Fluxo especial detectado (invite/recovery) - persistente, não depende do hash
+  _fluxoEspecialDetectado: false,
   // Deduplicação: último userId processado com sucesso (limpo no logout)
   _ultimoUserIdProcessado: null,
 };
@@ -149,6 +257,10 @@ function marcarInicializado(autenticado = false, autorizado = false, emRedefinic
  * @param {string} senha - Senha do usuário
  */
 export async function loginComEmail(email, senha) {
+  // Iniciar login convencional abandona qualquer fluxo especial pendente
+  // (ex: usuário clicou em link de convite mas depois fez login normal)
+  abandonarFluxoEspecial('login-convencional');
+
   try {
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
@@ -208,14 +320,16 @@ export async function logout() {
  */
 export async function atualizarSenha(novaSenha) {
   try {
+    // REQUER sessão válida do Supabase (token de recuperação ativo).
+    // O sessionStorage NÃO substitui a validação do Supabase.
+    // Se não houver sessão válida, o Supabase retornará erro.
     const { error } = await supabase.auth.updateUser({
       password: novaSenha
     });
     if (error) throw error;
 
-    // Limpa o estado de redefinição de senha após sucesso
-    estadoAuth.emRedefinicaoSenha = false;
-    window.NailFlow.auth.emRedefinicaoSenha = false;
+    // Sucesso: limpa o estado de fluxo especial completamente (flag interna + sessionStorage)
+    limparFluxoEspecial();
 
     // Remove o token da URL por segurança
     if (window.location.hash.includes('type=recovery') || window.location.hash.includes('access_token')) {
@@ -237,6 +351,8 @@ export async function atualizarSenha(novaSenha) {
         mensagem = 'A nova senha deve ser diferente da anterior.';
       } else if (msg.includes('session expired') || msg.includes('token expired') || msg.includes('expirado')) {
         mensagem = 'O link de recuperação expirou. Solicite um novo e-mail.';
+        // Link expirado = fluxo especial abandonado
+        abandonarFluxoEspecial('token-expirado');
       }
     }
 
@@ -301,6 +417,12 @@ export async function inicializarAuth() {
 
   console.log('[Auth] Inicializando sistema de autenticação...');
 
+  // Capturar intenção de fluxo especial (invite/recovery) ANTES de qualquer processamento
+  // Isso define _fluxoEspecialDetectado e emRedefinicaoSenha, e opcionalmente salva no sessionStorage
+  // para sobreviver a F5. O sessionStorage é APENAS para intenção de NAVEGAÇÃO (mostrar tela correta),
+  // NÃO para autorização - o Supabase valida o token/sessão.
+  capturarIntencaoFluxoEspecial();
+
   // 1. Listener para mudanças de estado (login, logout, refresh token)
   // IMPORTANTE: Callback síncrono - NÃO fazer chamadas async/await aqui
   // O processamento assíncrono (buscar estudioId) é delegado para processarLoginAsync
@@ -311,11 +433,28 @@ export async function inicializarAuth() {
       case 'INITIAL_SESSION':
         // Sessão recuperada do storage ao carregar a página
         if (sessao?.user) {
-          // Dispara processamento assíncrono sem bloquear o callback
-          processarLoginAsync(sessao, sessao.user);
+          // Se há fluxo especial detectado, não processar como login convencional
+          // Usamos isFluxoEspecialDetectado() que NÃO depende do hash (que pode ter sido limpo)
+          if (isFluxoEspecialDetectado()) {
+            console.log('[Auth] INITIAL_SESSION: fluxo especial detectado — ignorando processarLoginAsync');
+            // Ainda marca como inicializado para não bloquear a navegação
+            marcarInicializado(true, false, true);
+            dispararEvento('auth:pronto', { autenticado: true, autorizado: false, emRedefinicaoSenha: true });
+          } else {
+            // Dispara processamento assíncrono sem bloquear o callback
+            processarLoginAsync(sessao, sessao.user);
+          }
         } else {
-          marcarInicializado(false, false);
-          dispararEvento('auth:pronto', { autenticado: false, autorizado: false });
+          // Sem sessão: se há fluxo especial detectado (ex: link de convite/recovery),
+          // preservar emRedefinicaoSenha — o Supabase pode ainda não ter processado o token
+          if (isFluxoEspecialDetectado()) {
+            console.log('[Auth] INITIAL_SESSION: sem sessão, mas fluxo especial ativo — preservando estado');
+            marcarInicializado(false, false, true);
+            dispararEvento('auth:pronto', { autenticado: false, autorizado: false, emRedefinicaoSenha: true });
+          } else {
+            marcarInicializado(false, false);
+            dispararEvento('auth:pronto', { autenticado: false, autorizado: false, emRedefinicaoSenha: false });
+          }
         }
         break;
 
@@ -328,9 +467,14 @@ export async function inicializarAuth() {
           const _hashParams = new URLSearchParams(window.location.hash.substring(1));
           if (_hashParams.get('type') === 'invite') {
             console.log('[Auth] Convite detectado no SIGNED_IN - disparando auth:password-recovery');
-            document.dispatchEvent(new CustomEvent('auth:password-recovery', {
-              detail: { sessao, usuario: sessao.user }
-            }));
+            // Usa dispararEvento() que dispara em window (consistente com listeners do navegacao.js)
+            dispararEvento('auth:password-recovery', { sessao, usuario: sessao.user });
+            return;
+          }
+          // Se fluxo especial já foi detectado (ex: type=recovery), não sobrescrever
+          // Usamos isFluxoEspecialDetectado() que NÃO depende do hash (que pode ter sido limpo)
+          if (isFluxoEspecialDetectado()) {
+            console.log('[Auth] SIGNED_IN: fluxo especial detectado — ignorando processarLoginAsync');
             return;
           }
           processarLoginAsync(sessao, sessao.user);
@@ -382,10 +526,26 @@ export async function inicializarAuth() {
   // (onAuthStateChange com INITIAL_SESSION já faz isso, mas garantimos)
   const { data: { session } } = await supabase.auth.getSession();
   if (session?.user) {
-    await processarLoginAsync(session, session.user);
+    // Se fluxo especial detectado, não processar como login convencional
+    // Usamos isFluxoEspecialDetectado() que NÃO depende do hash (que pode ter sido limpo)
+    if (isFluxoEspecialDetectado()) {
+      console.log('[Auth] getSession: fluxo especial detectado — ignorando processarLoginAsync');
+      marcarInicializado(true, false, true);
+      dispararEvento('auth:pronto', { autenticado: true, autorizado: false, emRedefinicaoSenha: true });
+    } else {
+      await processarLoginAsync(session, session.user);
+    }
   } else {
-    marcarInicializado(false, false);
-    dispararEvento('auth:pronto', { autenticado: false, autorizado: false });
+    // Sem sessão: se há fluxo especial detectado (ex: link de convite/recovery),
+    // NÃO resetar emRedefinicaoSenha — o Supabase pode ainda não ter processado o token
+    if (isFluxoEspecialDetectado()) {
+      console.log('[Auth] getSession: sem sessão, mas fluxo especial ativo — preservando estado');
+      marcarInicializado(false, false, true);
+      dispararEvento('auth:pronto', { autenticado: false, autorizado: false, emRedefinicaoSenha: true });
+    } else {
+      marcarInicializado(false, false);
+      dispararEvento('auth:pronto', { autenticado: false, autorizado: false, emRedefinicaoSenha: false });
+    }
   }
 }
 
@@ -394,6 +554,14 @@ export async function inicializarAuth() {
  * Busca estudio_id e atualiza estado, disparando eventos apropriados
  */
 async function processarLoginAsync(sessao, usuario) {
+  // Guard: se fluxo especial detectado, não processar como login convencional
+  // Isso evita sobrescrever emRedefinicaoSenha=true com false
+  // Usamos isFluxoEspecialDetectado() que NÃO depende do hash (que pode ter sido limpo)
+  if (isFluxoEspecialDetectado()) {
+    console.log('[Auth] processarLoginAsync: fluxo especial detectado — abortando processamento convencional');
+    return;
+  }
+
   // Deduplicação SÍNCRONA: checa e marca ANTES de qualquer await
   // Evita que chamadas concorrentes (getSession + INITIAL_SESSION + SIGNED_IN) processem o mesmo login
   if (estadoAuth._ultimoUserIdProcessado === usuario.id) {
@@ -461,6 +629,8 @@ async function processarLoginAsync(sessao, usuario) {
 function processarLogout(motivo = 'logout') {
   const usuarioAnterior = estadoAuth.usuario;
   limparEstadoAuth();
+  // Também limpa estado de fluxo especial para não interferir em login posterior
+  limparFluxoEspecial();
 
   console.log('[Auth] Logout processado:', { motivo, usuarioAnterior: usuarioAnterior?.id });
 
@@ -480,6 +650,12 @@ inicializarAuth().catch(err => {
     erro: err
   });
 });
+
+// Expor helper de teste para window.NailFlow.auth (não usado em produção)
+// Colocado aqui para garantir que window.NailFlow.auth já existe
+if (typeof window !== 'undefined' && window.NailFlow && window.NailFlow.auth) {
+  window.NailFlow.auth._abandonarFluxoEspecial = abandonarFluxoEspecial;
+}
 
 // =============================================================================
 // Exporta estado para debug (somente leitura via getters)

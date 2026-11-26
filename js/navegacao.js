@@ -628,9 +628,11 @@ function inicializarAuthListeners() {
     console.log('[Navegação] auth:pronto', event.detail);
     authInicializado = true;
     // Exibe app apenas se autenticado E autorizado
+    // Se emRedefinicaoSenha estiver ativo (fluxo invite/recovery), mostra tela de redefinição
     const autenticado = event.detail.autenticado === true;
     const autorizado = event.detail.autorizado === true;
-    alternarVisibilidadeApp(autenticado && autorizado, false);
+    const emRedefinicaoSenha = event.detail.emRedefinicaoSenha === true;
+    alternarVisibilidadeApp(autenticado && autorizado, emRedefinicaoSenha);
     atualizarNavegacao(false);
   });
 
@@ -650,6 +652,16 @@ function inicializarAuthListeners() {
     }
   });
 
+  // Fluxo especial abandonado (usuário saiu da tela, link expirou, login convencional)
+  window.addEventListener("auth:special-flow-abandoned", (event) => {
+    console.log('[Navegação] auth:special-flow-abandoned recebido', event.detail);
+    // Se estava na tela de redefinir-senha, voltar para login
+    const rotaAtual = obterRotaAtual();
+    if (rotaAtual === "redefinir-senha") {
+      window.location.hash = "#login";
+    }
+  });
+
   // Senha atualizada com sucesso
   window.addEventListener("auth:password-updated", (event) => {
     console.log('[Navegação] auth:password-updated recebido', event.detail);
@@ -662,7 +674,28 @@ function inicializarAuthListeners() {
 // Inicialização
 // =============================================================================
 
-window.addEventListener("hashchange", atualizarNavegacao);
+window.addEventListener("hashchange", (event) => {
+  // Detectar abandono do fluxo especial: usuário navegou para fora de redefinir-senha
+  // enquanto emRedefinicaoSenha estava true
+  const hashNovo = window.location.hash.slice(1);
+
+  // Mais confiável: verificar se ANTES estávamos em redefinir-senha e agora não estamos
+  // Usamos rotaAnterior para rastrear a rota anterior
+  if (rotaAnterior === "redefinir-senha" && hashNovo !== "redefinir-senha") {
+    const emRedefinicaoSenha = window.NailFlow?.auth?.emRedefinicaoSenha === true;
+    if (emRedefinicaoSenha) {
+      console.log('[Navegação] Usuário saiu de redefinir-senha — abandonando fluxo especial');
+      // Import dinâmico para evitar dependência circular
+      import("./auth.js").then(({ abandonarFluxoEspecial }) => {
+        abandonarFluxoEspecial('navegacao-fora-da-tela');
+      }).catch(() => {
+        // Se falhar import, o auth.js já limpará no logout/login
+      });
+    }
+  }
+
+  atualizarNavegacao();
+});
 
 document.addEventListener("DOMContentLoaded", () => {
   configurarLogout();
