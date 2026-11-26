@@ -1,50 +1,73 @@
 /**
  * Testes para a UI do Dashboard - NailFlow
- * Testa a função pura obterMateriaisParaReposicao
+ * Testa a função pura obterMateriaisParaReposicao (carregada do código fonte)
  */
 
-const { describe, it } = require("node:test");
+const { describe, it, beforeEach } = require("node:test");
 const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const vm = require("node:vm");
 
-/**
- * Retorna os materiais que precisam de reposição (quantidadeDisponivel <= quantidadeMinima)
- * Função pura - reutiliza a mesma regra da tela de Materiais (materiais-ui.js)
- * @param {Array} materiais - Lista de materiais
- * @returns {Array} Materiais que precisam de reposição
- */
-function obterMateriaisParaReposicao(materiais) {
-  if (!Array.isArray(materiais)) return [];
-  return materiais.filter(
-    (mat) =>
-      mat &&
-      typeof mat === "object" &&
-      Number(mat.quantidadeDisponivel) <= Number(mat.quantidadeMinima)
-  );
+const codigoDashboardUI = fs.readFileSync("js/dashboard-ui.js", "utf8");
+
+function criarContextoMinimo() {
+  return vm.createContext({
+    console,
+    Number,
+    Array,
+    String,
+    document: {
+      querySelector: () => null,
+      querySelectorAll: () => [],
+      getElementById: () => null,
+      addEventListener: () => {},
+    },
+    window: {
+      NailFlow: {},
+      addEventListener: () => {},
+      location: { hash: "" },
+    },
+    CustomEvent: class CustomEvent {
+      constructor(type, detail) {
+        this.type = type;
+        this.detail = detail;
+      }
+    },
+  });
 }
 
-describe("obterMateriaisParaReposicao", () => {
+describe("obterMateriaisParaReposicao (do dashboard-ui.js)", () => {
+  let contexto;
+  let obterMateriaisParaReposicao;
+
+  beforeEach(() => {
+    contexto = criarContextoMinimo();
+    vm.runInContext(codigoDashboardUI, contexto);
+    obterMateriaisParaReposicao = vm.runInContext("obterMateriaisParaReposicao", contexto);
+  });
+
   it("retorna array vazio quando lista é null", () => {
     const resultado = obterMateriaisParaReposicao(null);
-    assert.deepStrictEqual(resultado, []);
+    assert.strictEqual(resultado.length, 0);
   });
 
   it("retorna array vazio quando lista é undefined", () => {
     const resultado = obterMateriaisParaReposicao(undefined);
-    assert.deepStrictEqual(resultado, []);
+    assert.strictEqual(resultado.length, 0);
   });
 
   it("retorna array vazio quando lista não é array", () => {
     const resultado = obterMateriaisParaReposicao("string");
-    assert.deepStrictEqual(resultado, []);
+    assert.strictEqual(resultado.length, 0);
     const resultado2 = obterMateriaisParaReposicao({});
-    assert.deepStrictEqual(resultado2, []);
+    assert.strictEqual(resultado2.length, 0);
     const resultado3 = obterMateriaisParaReposicao(123);
-    assert.deepStrictEqual(resultado3, []);
+    assert.strictEqual(resultado3.length, 0);
   });
 
   it("retorna array vazio quando lista está vazia", () => {
     const resultado = obterMateriaisParaReposicao([]);
-    assert.deepStrictEqual(resultado, []);
+    assert.strictEqual(resultado.length, 0);
   });
 
   it("retorna array vazio quando nenhum material precisa de reposição", () => {
@@ -53,7 +76,7 @@ describe("obterMateriaisParaReposicao", () => {
       { id: "2", nome: "Esmalte", quantidadeDisponivel: 50, quantidadeMinima: 5, unidade: "un" },
     ];
     const resultado = obterMateriaisParaReposicao(materiais);
-    assert.deepStrictEqual(resultado, []);
+    assert.strictEqual(resultado.length, 0);
   });
 
   it("retorna 1 item quando quantidadeDisponivel é igual a quantidadeMinima", () => {
