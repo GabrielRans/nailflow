@@ -13,40 +13,27 @@
 }
 
 /* =============================================================================
-   BOTÃO DE AÇÃO PRIMÁRIA (NOVA MOVIMENTAÇÃO)
-   Posicionado acima dos indicadores conforme a hierarquia do modelo F01
+   PAGE HEADER - Layout do cabeçalho da página
    ============================================================================= */
-.dashboard-nova-movimentacao {
-  display: block;
-  width: 100%;
-  margin-bottom: 16px;
-}
-
-.dashboard-nova-movimentacao .btn {
+.page-header {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  min-height: 48px;
-  padding: 12px 20px;
-  font-size: 1rem;
-  font-weight: 600;
-  border-radius: var(--radius, 12px);
-  background-color: var(--primary, #7c435c);
-  color: #ffffff;
-  text-decoration: none;
-  box-shadow: none !important;
-  transition: background-color 0.15s ease;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 8px;
 }
 
-.dashboard-nova-movimentacao .btn:hover {
-  background-color: #6a394f;
-  box-shadow: none !important;
+.header-texto {
+  flex: 1;
+  min-width: 0;
 }
 
-.dashboard-nova-movimentacao .btn:focus-visible {
-  outline: 3px solid var(--focus, #7c435c);
-  outline-offset: 2px;
+/* Desktop: header-texto à esquerda (sem ações no dashboard) */
+@media (min-width: 768px) {
+  .page-header {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
 }
 
 /* =============================================================================
@@ -393,17 +380,6 @@
 
 /* Tablet e Desktop (768px+) */
 @media (min-width: 768px) {
-  .dashboard-nova-movimentacao {
-    display: flex;
-    justify-content: flex-end;
-    margin-bottom: 16px;
-  }
-
-  .dashboard-nova-movimentacao .btn {
-    width: auto;
-    min-width: 200px;
-  }
-
   .indicadores-grid {
     grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 10px;
@@ -463,6 +439,39 @@
   .card-indicador .valor {
     font-size: 1.1875rem;
   }
+}
+
+/* =============================================================================
+   BOTÃO NOVA MOVIMENTAÇÃO - Abaixo dos indicadores, largura total
+   ============================================================================= */
+.dashboard-nova-movimentacao {
+  margin-bottom: 24px;
+}
+
+.dashboard-nova-movimentacao .btn {
+  display: block;
+  width: 100%;
+  text-align: center;
+  min-height: 48px;
+  padding: 12px 20px;
+  font-size: 1rem;
+  font-weight: 600;
+  border-radius: var(--radius, 12px);
+  background-color: var(--primary, #7c435c);
+  color: #ffffff;
+  text-decoration: none;
+  box-shadow: none !important;
+  transition: background-color 0.15s ease;
+}
+
+.dashboard-nova-movimentacao .btn:hover {
+  background-color: #6a394f;
+  box-shadow: none !important;
+}
+
+.dashboard-nova-movimentacao .btn:focus-visible {
+  outline: 3px solid var(--focus, #7c435c);
+  outline-offset: 2px;
 }
 
 /* Acessibilidade: Movimento reduzido */
