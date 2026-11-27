@@ -27,46 +27,12 @@
   min-width: 0;
 }
 
-.header-acoes {
-  display: flex;
-  justify-content: flex-start;
-  flex-wrap: wrap;
-  gap: 12px;
-}
-
-.header-acoes .btn {
-  min-height: 48px;
-  padding: 12px 20px;
-  font-size: 1rem;
-  font-weight: 600;
-  border-radius: var(--radius, 12px);
-  background-color: var(--primary, #7c435c);
-  color: #ffffff;
-  text-decoration: none;
-  box-shadow: none !important;
-  transition: background-color 0.15s ease;
-}
-
-.header-acoes .btn:hover {
-  background-color: #6a394f;
-  box-shadow: none !important;
-}
-
-.header-acoes .btn:focus-visible {
-  outline: 3px solid var(--focus, #7c435c);
-  outline-offset: 2px;
-}
-
-/* Desktop: header-texto à esquerda, header-acoes à direita */
+/* Desktop: header-texto à esquerda (sem ações no dashboard) */
 @media (min-width: 768px) {
   .page-header {
     flex-direction: row;
     align-items: center;
     justify-content: space-between;
-  }
-
-  .header-acoes {
-    justify-content: flex-end;
   }
 }
 
@@ -473,6 +439,39 @@
   .card-indicador .valor {
     font-size: 1.1875rem;
   }
+}
+
+/* =============================================================================
+   BOTÃO NOVA MOVIMENTAÇÃO - Abaixo dos indicadores, largura total
+   ============================================================================= */
+.dashboard-nova-movimentacao {
+  margin-bottom: 24px;
+}
+
+.dashboard-nova-movimentacao .btn {
+  display: block;
+  width: 100%;
+  text-align: center;
+  min-height: 48px;
+  padding: 12px 20px;
+  font-size: 1rem;
+  font-weight: 600;
+  border-radius: var(--radius, 12px);
+  background-color: var(--primary, #7c435c);
+  color: #ffffff;
+  text-decoration: none;
+  box-shadow: none !important;
+  transition: background-color 0.15s ease;
+}
+
+.dashboard-nova-movimentacao .btn:hover {
+  background-color: #6a394f;
+  box-shadow: none !important;
+}
+
+.dashboard-nova-movimentacao .btn:focus-visible {
+  outline: 3px solid var(--focus, #7c435c);
+  outline-offset: 2px;
 }
 
 /* Acessibilidade: Movimento reduzido */
