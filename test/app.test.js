@@ -1769,6 +1769,243 @@ describe("Auth - Fluxo Especial (convite/recuperação de senha)", () => {
     assert.equal(ultimoPronto.detail.autenticado, false, "auth:pronto deve ter autenticado=false (sem sessão)");
     assert.equal(ultimoPronto.detail.autorizado, false, "auth:pronto deve ter autorizado=false");
   });
+
+  // =============================================================================
+  // NOVOS TESTES: Concorrência entre INITIAL_SESSION e PASSWORD_RECOVERY
+  // =============================================================================
+
+  it("Cenário A: INITIAL_SESSION inicia processamento, PASSWORD_RECOVERY chega antes da consulta terminar — permanece no fluxo de recuperação", async () => {
+    // Este teste simula a condição de corrida real:
+    // 1. INITIAL_SESSION chega com sessão válida
+    // 2. processarLoginAsync inicia e começa busca assíncrona de estudioId
+    // 3. PASSWORD_RECOVERY chega ANTES da busca terminar
+    // 4. A busca termina — deve abortar login convencional e manter fluxo de recuperação
+
+    let resolveBuscaEstudio;
+    const buscaEstudioPromise = new Promise(resolve => {
+      resolveBuscaEstudio = resolve;
+    });
+
+    // Mock buscarEstudioIdDoUsuario que aguarda nossa resolução
+    contexto = await criarContextoAuthComHash("#dashboard"); // hash limpo inicialmente
+
+    // Sobrescrever buscarEstudioIdDoUsuario para controlar quando termina
+    // Usamos uma closure para capturar a promise resolvível
+    vm.runInContext(`
+      let _resolveBuscaEstudio;
+      const _buscaEstudioPromise = new Promise(r => { _resolveBuscaEstudio = r; });
+      buscarEstudioIdDoUsuario = async (userId) => {
+        await _buscaEstudioPromise;
+        return null; // Sem estúdio vinculado
+      };
+      // Expor função de resolução para o teste
+      __resolveBuscaEstudioTest = () => _resolveBuscaEstudio();
+    `, contexto);
+
+    // Inicia processarLoginAsync (simula INITIAL_SESSION com sessão válida)
+    const sessaoValida = { user: { id: "user-race-a", email: "race-a@test.com" } };
+    const loginPromise = contexto.processarLoginAsync(sessaoValida, sessaoValida.user);
+
+    // Aguarda um tick para garantir que processarLoginAsync iniciou e está no await buscarEstudioIdDoUsuario
+    await new Promise(r => setTimeout(r, 10));
+
+    // AGORA: Simula PASSWORD_RECOVERY chegando (o fluxo especial começa)
+    // Dispara callback PASSWORD_RECOVERY
+    if (contexto._authStateCallback) {
+      contexto._authStateCallback('PASSWORD_RECOVERY', sessaoValida);
+    }
+
+    // Aguarda processamento do PASSWORD_RECOVERY
+    await new Promise(r => setTimeout(r, 10));
+
+    // Verifica que fluxo especial foi detectado
+    assert.equal(contexto.window.NailFlow.auth.emRedefinicaoSenha, true, "PASSWORD_RECOVERY deve definir emRedefinicaoSenha=true");
+    // _fluxoEspecialDetectado é interno em estadoAuth, verificar via window.NailFlow.auth se exposto
+    // O importante é que emRedefinicaoSenha está true
+
+    // AGORA: Resolve a busca de estudioId (a consulta assíncrona termina)
+    vm.runInContext("__resolveBuscaEstudioTest();", contexto);
+    resolveBuscaEstudio(); // Resolve a promise externa também (para o await no teste)
+    await loginPromise; // Aguarda conclusão do processarLoginAsync
+
+    // Verifica que NÃO emitiu eventos de login convencional
+    const eventosLogin = eventosAuth.filter(e => e.tipo === 'auth:login');
+    assert.equal(eventosLogin.length, 0, "NÃO deve disparar auth:login quando PASSWORD_RECOVERY interceptou");
+
+    const eventosUnauthorized = eventosAuth.filter(e => e.tipo === 'auth:unauthorized');
+    assert.equal(eventosUnauthorized.length, 0, "NÃO deve disparar auth:unauthorized quando PASSWORD_RECOVERY interceptou");
+
+    // Deve ter emitido auth:password-recovery
+    const eventosRecovery = eventosAuth.filter(e => e.tipo === 'auth:password-recovery');
+    assert.ok(eventosRecovery.length > 0, "Deve disparar auth:password-recovery");
+
+    // Verifica que deduplicação foi limpa (permite login futuro)
+    assert.equal(contexto.estadoAuth?._ultimoUserIdProcessado ?? contexto._ultimoUserIdProcessado ?? null, null, "Deduplicação deve ser limpa ao abortar por fluxo especial");
+  });
+
+  it("Cenário B: PASSWORD_RECOVERY chega antes de INITIAL_SESSION — fluxo especial tem prioridade", async () => {
+    // Cenário: PASSWORD_RECOVERY é processado primeiro, depois INITIAL_SESSION com sessão válida
+    // O fluxo especial deve manter prioridade
+
+    // Cria contexto SEM hash especial (para que INITIAL_SESSION não detecte fluxo no init)
+    contexto = await criarContextoAuthComHash("#dashboard");
+
+    // Primeiro: PASSWORD_RECOVERY chega (simula Supabase processando token de recovery)
+    const sessaoRecovery = { user: { id: "user-race-b", email: "race-b@test.com" } };
+    if (contexto._authStateCallback) {
+      contexto._authStateCallback('PASSWORD_RECOVERY', sessaoRecovery);
+    }
+    await new Promise(r => setTimeout(r, 10));
+
+    // Verifica estado após PASSWORD_RECOVERY - o callback deve detectar o fluxo especial
+    assert.equal(contexto.window.NailFlow.auth.emRedefinicaoSenha, true, "PASSWORD_RECOVERY deve definir emRedefinicaoSenha=true");
+
+    // Depois: INITIAL_SESSION chega com sessão válida
+    if (contexto._authStateCallback) {
+      contexto._authStateCallback('INITIAL_SESSION', sessaoRecovery);
+    }
+    await new Promise(r => setTimeout(r, 10));
+
+    // Fluxo especial deve ter prioridade — não processar como login convencional
+    const eventosLogin = eventosAuth.filter(e => e.tipo === 'auth:login');
+    assert.equal(eventosLogin.length, 0, "INITIAL_SESSION após PASSWORD_RECOVERY não deve processar login convencional");
+
+    const eventosUnauthorized = eventosAuth.filter(e => e.tipo === 'auth:unauthorized');
+    assert.equal(eventosUnauthorized.length, 0, "INITIAL_SESSION após PASSWORD_RECOVERY não deve disparar auth:unauthorized");
+
+    // Deve manter estado de recuperação
+    assert.equal(contexto.window.NailFlow.auth.emRedefinicaoSenha, true, "emRedefinicaoSenha deve permanecer true");
+
+    // auth:pronto deve refletir fluxo especial
+    const eventosPronto = eventosAuth.filter(e => e.tipo === 'auth:pronto');
+    const ultimoPronto = eventosPronto[eventosPronto.length - 1];
+    assert.equal(ultimoPronto.detail.emRedefinicaoSenha, true, "auth:pronto deve ter emRedefinicaoSenha=true");
+    assert.equal(ultimoPronto.detail.autenticado, true, "auth:pronto deve ter autenticado=true (tem sessão)");
+  });
+
+  it("Cenário C: Fluxo de recuperação concluído com sucesso — autenticação/autorização calculados corretamente", async () => {
+    // Simula fluxo completo: recovery -> atualizarSenha -> sessão recuperada
+    contexto = await criarContextoAuthComHash("#type=recovery&access_token=def456");
+
+    const sessaoRecovery = { user: { id: "user-race-c", email: "race-c@test.com" } };
+    if (contexto._authStateCallback) {
+      contexto._authStateCallback('PASSWORD_RECOVERY', sessaoRecovery);
+    }
+    await new Promise(r => setTimeout(r, 10));
+
+    // Mock buscarEstudioIdDoUsuario para retornar estudioId (usuário COM vínculo)
+    vm.runInContext("buscarEstudioIdDoUsuario = async () => 'studio-123';", contexto);
+
+    // Chama atualizarSenha (simula usuário definindo nova senha)
+    await contexto.atualizarSenha("novaSenha123");
+
+    // Verifica estado final: autenticado E autorizado (tem estúdio)
+    assert.equal(contexto.window.NailFlow.auth.autenticado, true, "Deve estar autenticado após recovery bem-sucedido");
+    assert.equal(contexto.window.NailFlow.auth.autorizado, true, "Deve estar autorizado (tem estúdio vinculado)");
+    assert.equal(contexto.window.NailFlow.auth.estudioId, "studio-123", "estudioId deve ser definido");
+    assert.equal(contexto.window.NailFlow.auth.emRedefinicaoSenha, false, "emRedefinicaoSenha deve ser false após conclusão");
+
+    // Verifica eventos: auth:password-updated com autorizado=true
+    const eventosUpdated = eventosAuth.filter(e => e.tipo === 'auth:password-updated');
+    assert.ok(eventosUpdated.length > 0, "Deve disparar auth:password-updated");
+    assert.equal(eventosUpdated[0].detail.autorizado, true);
+    assert.equal(eventosUpdated[0].detail.estudioId, "studio-123");
+
+    // Deve ter disparado auth:login (AuthN + AuthZ OK)
+    const eventosLogin = eventosAuth.filter(e => e.tipo === 'auth:login');
+    assert.ok(eventosLogin.length > 0, "Deve disparar auth:login quando autorizado");
+    assert.equal(eventosLogin[0].detail.estudioId, "studio-123");
+
+    // NÃO deve ter disparado auth:unauthorized
+    const eventosUnauthorized = eventosAuth.filter(e => e.tipo === 'auth:unauthorized');
+    assert.equal(eventosUnauthorized.length, 0, "NÃO deve disparar auth:unauthorized quando tem estúdio");
+  });
+
+  it("Cenário C (sem estúdio): Fluxo de recuperação concluído sem vínculo — autenticado mas não autorizado", async () => {
+    // Mesmo fluxo mas sem estúdio vinculado
+    contexto = await criarContextoAuthComHash("#type=recovery&access_token=def456");
+
+    const sessaoRecovery = { user: { id: "user-race-c2", email: "race-c2@test.com" } };
+    if (contexto._authStateCallback) {
+      contexto._authStateCallback('PASSWORD_RECOVERY', sessaoRecovery);
+    }
+    await new Promise(r => setTimeout(r, 10));
+
+    // buscarEstudioIdDoUsuario retorna null por padrão (sem estúdio)
+    await contexto.atualizarSenha("novaSenha123");
+
+    // Verifica estado final: autenticado mas NÃO autorizado
+    assert.equal(contexto.window.NailFlow.auth.autenticado, true, "Deve estar autenticado");
+    assert.equal(contexto.window.NailFlow.auth.autorizado, false, "NÃO deve estar autorizado (sem estúdio)");
+    assert.equal(contexto.window.NailFlow.auth.estudioId, null, "estudioId deve ser null");
+
+    // Deve ter disparado auth:unauthorized
+    const eventosUnauthorized = eventosAuth.filter(e => e.tipo === 'auth:unauthorized');
+    assert.ok(eventosUnauthorized.length > 0, "Deve disparar auth:unauthorized quando sem estúdio");
+    assert.ok(eventosUnauthorized[0].detail.mensagem, "Deve conter mensagem informativa");
+
+    // NÃO deve ter disparado auth:login
+    const eventosLogin = eventosAuth.filter(e => e.tipo === 'auth:login');
+    assert.equal(eventosLogin.length, 0, "NÃO deve disparar auth:login quando sem estúdio");
+
+    // auth:password-updated com autorizado=false
+    const eventosUpdated = eventosAuth.filter(e => e.tipo === 'auth:password-updated');
+    assert.ok(eventosUpdated.length > 0);
+    assert.equal(eventosUpdated[0].detail.autorizado, false);
+    assert.equal(eventosUpdated[0].detail.estudioId, null);
+  });
+
+  it("Cenário D: Após concluir fluxo especial, login convencional futuro funciona normalmente", async () => {
+    // 1. Inicia fluxo de recuperação
+    contexto = await criarContextoAuthComHash("#dashboard");
+
+    const sessaoRecovery = { user: { id: "user-race-d", email: "race-d@test.com" } };
+    if (contexto._authStateCallback) {
+      contexto._authStateCallback('PASSWORD_RECOVERY', sessaoRecovery);
+    }
+    await new Promise(r => setTimeout(r, 10));
+
+    // 2. Conclui recuperação (sem estúdio)
+    await contexto.atualizarSenha("novaSenha123");
+
+    // Verifica que fluxo especial foi limpo
+    assert.equal(sharedSessionStorage.getItem('nailflow_fluxo_especial'), null, "sessionStorage deve ser limpo");
+    assert.equal(contexto.window.NailFlow.auth.emRedefinicaoSenha, false, "Fluxo especial deve ser limpo após conclusão (emRedefinicaoSenha=false)");
+
+    // 3. Agora simula login convencional (SIGNED_IN sem hash especial)
+    // Limpa hash para simular navegação normal
+    // Cria novo contexto para simular nova navegação/login
+    // (o estado do contexto anterior já tem autenticado=true, autorizado=false)
+
+    // Chama processarLoginAsync diretamente para simular novo login
+    // O usuário já está autenticado, mas vamos simular novo login
+    const eventosAuthAntesLogin = eventosAuth.length;
+
+    // Simula logout primeiro para limpar estado
+    await contexto.logout();
+    await new Promise(r => setTimeout(r, 10));
+
+    // Verifica que estado foi limpo
+    assert.equal(contexto.window.NailFlow.auth.autenticado, false);
+    assert.equal(contexto.window.NailFlow.auth.autorizado, false);
+
+    // Agora simula login convencional bem-sucedido
+    const sessaoLogin = { user: { id: "user-login-d", email: "login-d@test.com" } };
+    await contexto.processarLoginAsync(sessaoLogin, sessaoLogin.user);
+
+    // Deve ter processado login convencional (sem bloqueio de fluxo especial)
+    const eventosLogin = eventosAuth.slice(eventosAuthAntesLogin).filter(e => e.tipo === 'auth:login');
+    const eventosUnauthorized = eventosAuth.slice(eventosAuthAntesLogin).filter(e => e.tipo === 'auth:unauthorized');
+
+    // Como buscarEstudioIdDoUsuario retorna null (mock padrão), deve disparar auth:unauthorized
+    // O importante: NÃO foi bloqueado por fluxo especial
+    assert.ok(eventosUnauthorized.length > 0 || eventosLogin.length > 0, "Deve processar login convencional após fluxo especial terminar");
+
+    // Verifica que NÃO houve erro de "fluxo especial ativo" bloqueando
+    const eventosErro = eventosAuth.slice(eventosAuthAntesLogin).filter(e => e.tipo === 'auth:erro');
+    const errosFluxoEspecial = eventosErro.filter(e => e.detail.mensagem && e.detail.mensagem.includes('fluxo especial'));
+    assert.equal(errosFluxoEspecial.length, 0, "Não deve haver erro de fluxo especial bloqueando login convencional posterior");
+  });
 });
 
 // =============================================================================

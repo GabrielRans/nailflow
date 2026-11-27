@@ -555,6 +555,20 @@ export async function inicializarAuth() {
         // Usuário clicou no link de recuperação de senha no e-mail
         // A sessão contém um token de recuperação - mostrar tela de redefinição
         console.log('[Auth] PASSWORD_RECOVERY detectado - exibindo tela de redefinição de senha');
+
+        // Marcar fluxo especial como detectado (prioridade sobre login convencional)
+        // Isso impede que processarLoginAsync iniciado anteriormente continue
+        if (!estadoAuth._fluxoEspecialDetectado) {
+          console.log('[Auth] PASSWORD_RECOVERY: marcando fluxo especial como detectado');
+          estadoAuth._fluxoEspecialDetectado = true;
+          // Persistir intenção de navegação no sessionStorage para sobreviver a F5
+          try {
+            sessionStorage.setItem('nailflow_fluxo_especial', 'true');
+          } catch {
+            // Ignorar erros de sessionStorage (ex: navegação privada)
+          }
+        }
+
         if (sessao?.user) {
           atualizarEstadoAuth(sessao, sessao.user, null, true);
           dispararEvento('auth:password-recovery', { sessao, usuario: sessao.user });
@@ -625,6 +639,16 @@ async function processarLoginAsync(sessao, usuario) {
   try {
     // Buscar estudio_id vinculado a este usuário
     const estudioId = await buscarEstudioIdDoUsuario(usuario.id);
+
+    // Guard 2: Verificar novamente se fluxo especial foi iniciado durante a consulta assíncrona
+    // (ex: PASSWORD_RECOVERY chegou enquanto buscávamos o vínculo com estúdio)
+    if (isFluxoEspecialDetectado()) {
+      console.log('[Auth] processarLoginAsync: fluxo especial detectado APÓS consulta — abortando processamento convencional');
+      // IMPORTANTE: Limpar a marca de deduplicação para permitir login futuro
+      // Não emitir eventos de login convencional
+      estadoAuth._ultimoUserIdProcessado = null;
+      return;
+    }
 
     const autenticado = true;
     const autorizado = !!estudioId;
