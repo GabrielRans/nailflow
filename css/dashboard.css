@@ -13,20 +13,28 @@
 }
 
 /* =============================================================================
-   BOTÃO DE AÇÃO PRIMÁRIA (NOVA MOVIMENTAÇÃO)
-   Posicionado acima dos indicadores conforme a hierarquia do modelo F01
+   PAGE HEADER - Layout do cabeçalho da página
    ============================================================================= */
-.dashboard-nova-movimentacao {
-  display: block;
-  width: 100%;
-  margin-bottom: 16px;
+.page-header {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 8px;
 }
 
-.dashboard-nova-movimentacao .btn {
+.header-texto {
+  flex: 1;
+  min-width: 0;
+}
+
+.header-acoes {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
+  justify-content: flex-start;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.header-acoes .btn {
   min-height: 48px;
   padding: 12px 20px;
   font-size: 1rem;
@@ -39,14 +47,27 @@
   transition: background-color 0.15s ease;
 }
 
-.dashboard-nova-movimentacao .btn:hover {
+.header-acoes .btn:hover {
   background-color: #6a394f;
   box-shadow: none !important;
 }
 
-.dashboard-nova-movimentacao .btn:focus-visible {
+.header-acoes .btn:focus-visible {
   outline: 3px solid var(--focus, #7c435c);
   outline-offset: 2px;
+}
+
+/* Desktop: header-texto à esquerda, header-acoes à direita */
+@media (min-width: 768px) {
+  .page-header {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .header-acoes {
+    justify-content: flex-end;
+  }
 }
 
 /* =============================================================================
@@ -393,17 +414,6 @@
 
 /* Tablet e Desktop (768px+) */
 @media (min-width: 768px) {
-  .dashboard-nova-movimentacao {
-    display: flex;
-    justify-content: flex-end;
-    margin-bottom: 16px;
-  }
-
-  .dashboard-nova-movimentacao .btn {
-    width: auto;
-    min-width: 200px;
-  }
-
   .indicadores-grid {
     grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 10px;
