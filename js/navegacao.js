@@ -140,7 +140,8 @@ function atualizarNavegacao(gerenciarFocoAtivo = true) {
   }
 
   exibirTela(rota);
-  alternarVisibilidadeApp(estaAutenticado(), emRedefinicaoSenha);
+  // Usuário só vê o app se estiver autenticado E autorizado (exceto fluxo de redefinição de senha)
+  alternarVisibilidadeApp(estaAutenticado() && estaAutorizado(), emRedefinicaoSenha);
 
   const areaPrincipal = {
     movimentacao: "financeiro",
