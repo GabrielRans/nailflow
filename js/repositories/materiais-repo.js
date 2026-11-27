@@ -183,15 +183,15 @@ export async function criarMateriaisRepository() {
         atualizado_em: new Date().toISOString()
       };
 
-      const { error, count } = await supabase
+      const { data, error } = await supabase
         .from(TABELA)
         .update(row)
         .eq('estudio_id', estudioId)
         .eq('id', id)
-        .select('id', { count: 'exact', head: true });
+        .select('id');
 
       if (error) throw error;
-      return count > 0;
+      return (data?.length ?? 0) > 0;
     },
 
     /**
