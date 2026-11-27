@@ -1,146 +1,477 @@
+/**
+ * Dashboard UI Styles - NailFlow
+ * Alinhado ao Design System Modelo B e aos critérios da Issue #25
+ * Preserva estritamente a paleta oficial do projeto
+ * Hierarquia visual baseada no modelo oficial do Dashboard (F01)
+ */
+
+/* =============================================================================
+   CONTAINER DO DASHBOARD
+   ============================================================================= */
 .dashboard {
-  --dashboard-border: #d9deea;
-  --dashboard-muted: #525f72;
-  margin-bottom: 32px;
-  padding: clamp(18px, 4vw, 28px);
-  border: 1px solid #e4e8f0;
-  border-radius: 18px;
-  background: #f5f7fc;
+  margin-bottom: 24px;
 }
 
-.dashboard > h2 {
-  margin: 0 0 18px;
-  color: #172554;
-  font-size: clamp(1.25rem, 3vw, 1.5rem);
-  line-height: 1.25;
-  letter-spacing: -0.025em;
+/* =============================================================================
+   BOTÃO DE AÇÃO PRIMÁRIA (NOVA MOVIMENTAÇÃO)
+   Posicionado acima dos indicadores conforme a hierarquia do modelo F01
+   ============================================================================= */
+.dashboard-nova-movimentacao {
+  display: block;
+  width: 100%;
+  margin-bottom: 16px;
 }
 
-.dashboard__indicadores {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.dashboard__card {
-  min-width: 0;
-  padding: clamp(16px, 3vw, 22px);
-  border: 1px solid var(--dashboard-border);
-  border-top: 4px solid #64748b;
-  border-radius: 14px;
-  background: #fff;
-  box-shadow: 0 2px 8px rgb(23 37 84 / 5%);
-  transition: border-color 160ms ease, box-shadow 160ms ease;
-}
-
-.dashboard__card:hover {
-  border-inline-color: #c4ccda;
-  border-bottom-color: #c4ccda;
-  box-shadow: 0 6px 16px rgb(23 37 84 / 8%);
-}
-
-.dashboard__card--receitas {
-  border-top-color: #15803d;
-}
-
-.dashboard__card--despesas {
-  border-top-color: var(--danger-strong);
-}
-
-.dashboard__card--saldo {
-  border-top-color: #4f46e5;
-}
-
-.dashboard__card--ticket {
-  border-top-color: #0e7490;
-}
-
-.dashboard__card-titulo {
-  margin: 0 0 10px;
-  color: var(--dashboard-muted);
-  font-size: 0.9375rem;
+.dashboard-nova-movimentacao .btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 48px;
+  padding: 12px 20px;
+  font-size: 1rem;
   font-weight: 600;
+  border-radius: var(--radius, 12px);
+  background-color: var(--primary, #7c435c);
+  color: #ffffff;
+  text-decoration: none;
+  box-shadow: none !important;
+  transition: background-color 0.15s ease;
+}
+
+.dashboard-nova-movimentacao .btn:hover {
+  background-color: #6a394f;
+  box-shadow: none !important;
+}
+
+.dashboard-nova-movimentacao .btn:focus-visible {
+  outline: 3px solid var(--focus, #7c435c);
+  outline-offset: 2px;
+}
+
+/* =============================================================================
+   ESTADOS CONTEXTUAIS DO DASHBOARD (Vazio / Erro)
+   ============================================================================= */
+.dashboard__estado {
+  margin-bottom: 16px;
+  padding: 14px 16px;
+  border-radius: var(--radius, 12px);
+  background-color: var(--card, #ffffff);
+  border: 1px solid var(--border, #e1e5ea);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+}
+
+.dashboard__estado[hidden] {
+  display: none !important;
+}
+
+.dashboard__estado-conteudo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.dashboard__estado-icone {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background-color: var(--bg, #f5f6f8);
+  color: var(--primary, #7c435c);
+}
+
+.dashboard__estado-texto {
+  flex: 1 1 200px;
+  min-width: 0;
+}
+
+.dashboard__estado-texto strong {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-primary, #172554);
+  margin-bottom: 2px;
+}
+
+.dashboard__estado-texto p {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--text-secondary, #64748b);
   line-height: 1.4;
 }
 
-.dashboard__card-valor {
+/* Estado Vazio */
+.dashboard__estado--vazio {
+  background-color: #fafbfc;
+  border: 1px dashed var(--border, #e1e5ea);
+}
+
+.dashboard__estado--vazio .dashboard__estado-icone {
+  background-color: rgba(124, 67, 92, 0.08);
+  color: var(--primary, #7c435c);
+}
+
+/* Estado de Erro */
+.dashboard__estado--erro {
+  background-color: rgba(214, 93, 104, 0.06);
+  border: 1px solid var(--danger, #d65d68);
+}
+
+.dashboard__estado--erro .dashboard__estado-icone {
+  background-color: rgba(214, 93, 104, 0.15);
+  color: var(--danger-strong, #b91c1c);
+}
+
+.dashboard__estado--erro .dashboard__estado-texto strong {
+  color: var(--danger-strong, #b91c1c);
+}
+
+.btn-dashboard-recarregar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 38px;
+  min-width: 44px;
+  padding: 6px 14px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  border-radius: 8px;
+  border: 1px solid var(--danger, #d65d68);
+  background-color: var(--card, #ffffff);
+  color: var(--danger-strong, #b91c1c);
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.btn-dashboard-recarregar:hover {
+  background-color: rgba(214, 93, 104, 0.1);
+}
+
+.btn-dashboard-recarregar:focus-visible {
+  outline: 3px solid var(--focus, #7c435c);
+  outline-offset: 2px;
+}
+
+/* =============================================================================
+   GRID DE INDICADORES E CARDS (DESIGN SYSTEM OFICIAL MODELO B)
+   Cartões uniformes com bordas neutras (sem faixas ou bordas verdes)
+   ============================================================================= */
+.indicadores-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.card-indicador {
+  position: relative;
+  background: var(--card, #ffffff);
+  border: 1px solid var(--border, #e1e5ea);
+  border-radius: var(--radius, 12px);
+  padding: 16px;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
   min-width: 0;
-  margin: 0;
-  color: #172554;
-  font-size: clamp(1rem, 3.4vw, 1.5rem);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.card-indicador .icone {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: var(--bg, #f5f6f8);
+  color: var(--primary, #7c435c);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.card-indicador .icone svg {
+  width: 20px;
+  height: 20px;
+}
+
+.card-indicador .info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.card-indicador .label {
+  font-size: 0.75rem;
+  color: var(--text-secondary, #64748b);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.card-indicador .valor {
+  font-size: clamp(0.875rem, 3vw, 1.1875rem);
   font-weight: 700;
+  color: var(--text-primary, #172554);
   font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
   line-height: 1.25;
-  overflow-wrap: anywhere;
+  min-width: 0;
+  white-space: nowrap;
 }
 
-.dashboard__card--receitas .dashboard__card-valor {
+/* =============================================================================
+   DIFERENCIAÇÃO DE SALDO (WCAG AA - NÃO DEPENDER APENAS DE COR)
+   Diferenciação sem faixas ou bordas verdes artificiais no cartão
+   ============================================================================= */
+.badge-saldo {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  margin-top: 4px;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+  line-height: 1.2;
+  letter-spacing: 0.01em;
+}
+
+.badge-saldo[hidden] {
+  display: none !important;
+}
+
+/* Saldo Positivo: pill sutil e sem borda verde no card */
+.badge-saldo--positivo {
+  background-color: rgba(22, 101, 52, 0.1);
   color: #166534;
+  border: 1px solid rgba(22, 101, 52, 0.2);
 }
 
-.dashboard__card--despesas .dashboard__card-valor {
-  color: var(--danger-strong);
+/* Saldo Negativo */
+.badge-saldo--negativo {
+  background-color: rgba(214, 93, 104, 0.12);
+  color: var(--danger-strong, #b91c1c);
+  border: 1px solid rgba(214, 93, 104, 0.25);
 }
 
-.dashboard__card--saldo .dashboard__card-valor {
-  color: #4338ca;
+.card-indicador--saldo-negativo .valor {
+  color: var(--danger-strong, #b91c1c);
 }
 
-.dashboard__card--ticket .dashboard__card-valor {
-  color: #0e7490;
+/* Saldo Neutro / Zerado */
+.badge-saldo--neutro {
+  background-color: var(--bg, #f5f6f8);
+  color: var(--text-secondary, #64748b);
+  border: 1px solid var(--border, #e1e5ea);
 }
 
-.dashboard__estado {
-  margin: 16px 0 0;
-  color: var(--dashboard-muted);
+/* =============================================================================
+   CARD DE ALERTA DE MATERIAIS (Flat / Sem sombras)
+   Hierarquia e visual alinhados ao wireframe F01
+   ============================================================================= */
+#alerta-reposicao,
+.card-alerta {
+  background-color: rgba(214, 93, 104, 0.08);
+  border: 1px solid rgba(214, 93, 104, 0.22);
+  border-radius: var(--radius, 12px);
+  box-shadow: none !important;
+  margin-bottom: 24px;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+#alerta-reposicao:hover,
+#alerta-reposicao:focus,
+#alerta-reposicao:visited,
+.card-alerta:hover,
+.card-alerta:focus,
+.card-alerta:visited {
+  background-color: rgba(214, 93, 104, 0.12);
+  border-color: rgba(214, 93, 104, 0.35);
+  box-shadow: none !important;
+}
+
+#alerta-reposicao .icone-alerta {
+  background-color: rgba(214, 93, 104, 0.18);
+  color: var(--danger-strong, #b91c1c);
+  border-radius: 50%;
+}
+
+#alerta-reposicao .texto-alerta strong {
+  color: var(--danger-strong, #b91c1c);
   font-size: 0.875rem;
-  line-height: 1.5;
+  font-weight: 600;
 }
 
-@media (max-width: 480px) {
-  .dashboard {
-    padding: 16px;
-    border-radius: 14px;
+#alerta-reposicao .texto-alerta .subtexto-alerta {
+  color: var(--text-secondary, #64748b);
+  font-size: 0.75rem;
+}
+
+#alerta-reposicao .seta-alerta {
+  color: var(--danger-strong, #b91c1c);
+  font-weight: 600;
+}
+
+/* =============================================================================
+   RESPONSIVIDADE EM TELAS ESTREITAS (320px - 768px)
+   ============================================================================= */
+
+/* Telas muito estreitas (<= 360px) */
+@media (max-width: 360px) {
+  .indicadores-grid {
+    gap: 8px;
+    margin-bottom: 12px;
   }
 
-  .dashboard__indicadores {
+  .card-indicador {
+    padding: 10px 6px;
+    gap: 6px;
+  }
+
+  .card-indicador .icone {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+  }
+
+  .card-indicador .icone svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  .card-indicador .label {
+    font-size: 0.6875rem;
+  }
+
+  .card-indicador .valor {
+    font-size: 0.75rem;
+    white-space: nowrap;
+  }
+
+  .badge-saldo {
+    font-size: 0.625rem;
+    padding: 1px 4px;
+    margin-top: 2px;
+  }
+}
+
+/* Telas mobile padrão (361px a 480px, incluindo 375px) */
+@media (min-width: 361px) and (max-width: 480px) {
+  .indicadores-grid {
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+
+  .card-indicador {
+    padding: 12px 8px;
+    gap: 8px;
+  }
+
+  .card-indicador .icone {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+  }
+
+  .card-indicador .icone svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  .card-indicador .valor {
+    font-size: 0.8125rem;
+    white-space: nowrap;
+  }
+}
+
+/* Tablet e Desktop (768px+) */
+@media (min-width: 768px) {
+  .dashboard-nova-movimentacao {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 16px;
+  }
+
+  .dashboard-nova-movimentacao .btn {
+    width: auto;
+    min-width: 200px;
+  }
+
+  .indicadores-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
+    margin-bottom: 18px;
+  }
+
+  .card-indicador {
+    padding: 12px 8px;
+    gap: 8px;
+  }
+
+  .card-indicador .icone {
+    width: 32px;
+    height: 32px;
+  }
+
+  .card-indicador .icone svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  .card-indicador .label {
+    font-size: 0.6875rem;
+  }
+
+  .card-indicador .valor {
+    font-size: 0.8125rem;
+  }
+}
+
+/* Desktop amplo (1024px+) */
+@media (min-width: 1024px) {
+  .indicadores-grid {
+    gap: 16px;
+  }
+
+  .card-indicador {
+    padding: 18px 16px;
     gap: 12px;
   }
 
-  .dashboard__card {
-    padding: 15px 13px;
-    border-radius: 12px;
+  .card-indicador .icone {
+    width: 42px;
+    height: 42px;
+    border-radius: 10px;
   }
 
-  .dashboard__card-titulo {
-    margin-bottom: 8px;
-    font-size: 0.875rem;
+  .card-indicador .icone svg {
+    width: 20px;
+    height: 20px;
   }
 
-  .dashboard__card-valor {
-    font-size: clamp(0.9375rem, 4.5vw, 1.125rem);
-  }
-}
-
-@media (max-width: 340px) {
-  .dashboard {
-    padding: 12px;
+  .card-indicador .label {
+    font-size: 0.75rem;
   }
 
-  .dashboard__indicadores {
-    gap: 10px;
-  }
-
-  .dashboard__card {
-    padding: 13px 10px;
+  .card-indicador .valor {
+    font-size: 1.1875rem;
   }
 }
 
+/* Acessibilidade: Movimento reduzido */
 @media (prefers-reduced-motion: reduce) {
-  .dashboard__card {
-    transition: none;
+  .card-indicador,
+  .dashboard__estado,
+  .btn-dashboard-recarregar,
+  .dashboard-nova-movimentacao .btn,
+  #alerta-reposicao {
+    transition: none !important;
   }
 }

@@ -1,9 +1,15 @@
+
 /**
  * Testes para a UI do Dashboard - NailFlow
- * Testa a função pura obterMateriaisParaReposicao (carregada do código fonte)
+ *
+ * Testa as funções puras:
+ * - obterMateriaisParaReposicao
+ * - determinarEstadoSaldo (Issue #25)
+ * - obterTextoAcessivelIndicador (Issue #25)
+ * - formatarDataCurta
  */
 
-const { describe, it, beforeEach } = require("node:test");
+const { describe, it } = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const vm = require("node:vm");
@@ -36,111 +42,181 @@ function criarContextoMinimo() {
   });
 }
 
+const contexto = criarContextoMinimo();
+vm.runInContext(codigoDashboardUI, contexto);
+
+const obterMateriaisParaReposicao = vm.runInContext(
+  "obterMateriaisParaReposicao",
+  contexto
+);
+
+const determinarEstadoSaldo = vm.runInContext(
+  "determinarEstadoSaldo",
+  contexto
+);
+
+const obterTextoAcessivelIndicador = vm.runInContext(
+  "obterTextoAcessivelIndicador",
+  contexto
+);
+
+const formatarDataCurta = vm.runInContext(
+  "formatarDataCurta",
+  contexto
+);
+
 describe("obterMateriaisParaReposicao (do dashboard-ui.js)", () => {
-  let contexto;
-  let obterMateriaisParaReposicao;
-
-  beforeEach(() => {
-    contexto = criarContextoMinimo();
-    vm.runInContext(codigoDashboardUI, contexto);
-    obterMateriaisParaReposicao = vm.runInContext("obterMateriaisParaReposicao", contexto);
-  });
-
   it("retorna array vazio quando lista é null", () => {
-    const resultado = obterMateriaisParaReposicao(null);
-    assert.strictEqual(resultado.length, 0);
+    assert.strictEqual(obterMateriaisParaReposicao(null).length, 0);
   });
 
   it("retorna array vazio quando lista é undefined", () => {
-    const resultado = obterMateriaisParaReposicao(undefined);
-    assert.strictEqual(resultado.length, 0);
+    assert.strictEqual(obterMateriaisParaReposicao(undefined).length, 0);
   });
 
   it("retorna array vazio quando lista não é array", () => {
-    const resultado = obterMateriaisParaReposicao("string");
-    assert.strictEqual(resultado.length, 0);
-    const resultado2 = obterMateriaisParaReposicao({});
-    assert.strictEqual(resultado2.length, 0);
-    const resultado3 = obterMateriaisParaReposicao(123);
-    assert.strictEqual(resultado3.length, 0);
+    assert.strictEqual(obterMateriaisParaReposicao("não é array").length, 0);
+    assert.strictEqual(obterMateriaisParaReposicao(123).length, 0);
+    assert.strictEqual(obterMateriaisParaReposicao({}).length, 0);
   });
 
   it("retorna array vazio quando lista está vazia", () => {
-    const resultado = obterMateriaisParaReposicao([]);
-    assert.strictEqual(resultado.length, 0);
+    assert.strictEqual(obterMateriaisParaReposicao([]).length, 0);
+  });
+
+  it("retorna apenas materiais com estoque crítico (disponível <= mínimo)", () => {
+    const materiais = [
+      { id: "1", nome: "Esmalte Vermelho", quantidadeDisponivel: 2, quantidadeMinima: 5 },
+      { id: "2", nome: "Algodão", quantidadeDisponivel: 10, quantidadeMinima: 3 },
+      { id: "3", nome: "Acetona", quantidadeDisponivel: 1, quantidadeMinima: 1 },
+      { id: "4", nome: "Lixa", quantidadeDisponivel: 0, quantidadeMinima: 2 },
+    ];
+
+    const resultado = obterMateriaisParaReposicao(materiais);
+
+    assert.strictEqual(resultado.length, 3);
+    assert.strictEqual(resultado[0].nome, "Esmalte Vermelho");
+    assert.strictEqual(resultado[1].nome, "Acetona");
+    assert.strictEqual(resultado[2].nome, "Lixa");
   });
 
   it("retorna array vazio quando nenhum material precisa de reposição", () => {
     const materiais = [
-      { id: "1", nome: "Algodão", quantidadeDisponivel: 100, quantidadeMinima: 10, unidade: "un" },
-      { id: "2", nome: "Esmalte", quantidadeDisponivel: 50, quantidadeMinima: 5, unidade: "un" },
+      { id: "1", nome: "Esmalte Vermelho", quantidadeDisponivel: 10, quantidadeMinima: 5 },
+      { id: "2", nome: "Algodão", quantidadeDisponivel: 20, quantidadeMinima: 3 },
     ];
-    const resultado = obterMateriaisParaReposicao(materiais);
-    assert.strictEqual(resultado.length, 0);
+
+    assert.strictEqual(obterMateriaisParaReposicao(materiais).length, 0);
   });
 
-  it("retorna 1 item quando quantidadeDisponivel é igual a quantidadeMinima", () => {
+  it("converte strings numéricas corretamente", () => {
     const materiais = [
-      { id: "1", nome: "Algodão", quantidadeDisponivel: 10, quantidadeMinima: 10, unidade: "un" },
-      { id: "2", nome: "Esmalte", quantidadeDisponivel: 50, quantidadeMinima: 5, unidade: "un" },
+      { id: "1", nome: "Esmalte", quantidadeDisponivel: "2", quantidadeMinima: "5" },
+      { id: "2", nome: "Algodão", quantidadeDisponivel: "10", quantidadeMinima: "3" },
     ];
+
     const resultado = obterMateriaisParaReposicao(materiais);
+
     assert.strictEqual(resultado.length, 1);
-    assert.strictEqual(resultado[0].nome, "Algodão");
+    assert.strictEqual(resultado[0].nome, "Esmalte");
   });
 
-  it("retorna 1 item quando quantidadeDisponivel é menor que quantidadeMinima", () => {
+  it("ignora itens inválidos ou corrompidos na lista", () => {
     const materiais = [
-      { id: "1", nome: "Algodão", quantidadeDisponivel: 5, quantidadeMinima: 10, unidade: "un" },
-      { id: "2", nome: "Esmalte", quantidadeDisponivel: 50, quantidadeMinima: 5, unidade: "un" },
-    ];
-    const resultado = obterMateriaisParaReposicao(materiais);
-    assert.strictEqual(resultado.length, 1);
-    assert.strictEqual(resultado[0].nome, "Algodão");
-  });
-
-  it("retorna múltiplos itens quando vários precisam de reposição", () => {
-    const materiais = [
-      { id: "1", nome: "Algodão", quantidadeDisponivel: 5, quantidadeMinima: 10, unidade: "un" },
-      { id: "2", nome: "Esmalte", quantidadeDisponivel: 3, quantidadeMinima: 5, unidade: "un" },
-      { id: "3", nome: "Lixa", quantidadeDisponivel: 50, quantidadeMinima: 5, unidade: "un" },
-    ];
-    const resultado = obterMateriaisParaReposicao(materiais);
-    assert.strictEqual(resultado.length, 2);
-    assert.strictEqual(resultado[0].nome, "Algodão");
-    assert.strictEqual(resultado[1].nome, "Esmalte");
-  });
-
-  it("ignora materiais inválidos (sem campos numéricos)", () => {
-    const materiais = [
-      { id: "1", nome: "Algodão", quantidadeDisponivel: 5, quantidadeMinima: 10, unidade: "un" },
-      { id: "2", nome: "Invalido", quantidadeDisponivel: "abc", quantidadeMinima: 5, unidade: "un" },
-      { id: "3", nome: "SemCampos", unidade: "un" },
       null,
       undefined,
-      "string",
+      "item inválido",
+      { id: "1", nome: "Esmalte", quantidadeDisponivel: 1, quantidadeMinima: 5 },
     ];
+
     const resultado = obterMateriaisParaReposicao(materiais);
+
     assert.strictEqual(resultado.length, 1);
-    assert.strictEqual(resultado[0].nome, "Algodão");
+    assert.strictEqual(resultado[0].nome, "Esmalte");
   });
 
-  it("funciona com números como strings", () => {
+  it("preserva a imutabilidade do array de entrada", () => {
     const materiais = [
-      { id: "1", nome: "Algodão", quantidadeDisponivel: "5", quantidadeMinima: "10", unidade: "un" },
-      { id: "2", nome: "Esmalte", quantidadeDisponivel: "50", quantidadeMinima: "5", unidade: "un" },
-    ];
-    const resultado = obterMateriaisParaReposicao(materiais);
-    assert.strictEqual(resultado.length, 1);
-    assert.strictEqual(resultado[0].nome, "Algodão");
-  });
-
-  it("não muta o array original", () => {
-    const materiais = [
-      { id: "1", nome: "Algodão", quantidadeDisponivel: 5, quantidadeMinima: 10, unidade: "un" },
+      { id: "1", nome: "Esmalte", quantidadeDisponivel: 1, quantidadeMinima: 5 },
     ];
     const originalLength = materiais.length;
+
     obterMateriaisParaReposicao(materiais);
+
     assert.strictEqual(materiais.length, originalLength);
   });
 });
+
+describe("determinarEstadoSaldo (Issue #25)", () => {
+  it("retorna 'positivo' para valor maior que zero", () => {
+    assert.strictEqual(determinarEstadoSaldo(100), "positivo");
+    assert.strictEqual(determinarEstadoSaldo(0.01), "positivo");
+    assert.strictEqual(determinarEstadoSaldo("250.75"), "positivo");
+  });
+
+  it("retorna 'negativo' para valor menor que zero", () => {
+    assert.strictEqual(determinarEstadoSaldo(-50), "negativo");
+    assert.strictEqual(determinarEstadoSaldo(-0.01), "negativo");
+    assert.strictEqual(determinarEstadoSaldo("-120.00"), "negativo");
+  });
+
+  it("retorna 'neutro' para zero e valores nulos ou inválidos", () => {
+    assert.strictEqual(determinarEstadoSaldo(0), "neutro");
+    assert.strictEqual(determinarEstadoSaldo(-0), "neutro");
+    assert.strictEqual(determinarEstadoSaldo("0"), "neutro");
+    assert.strictEqual(determinarEstadoSaldo(null), "neutro");
+    assert.strictEqual(determinarEstadoSaldo(undefined), "neutro");
+    assert.strictEqual(determinarEstadoSaldo(NaN), "neutro");
+    assert.strictEqual(determinarEstadoSaldo("invalido"), "neutro");
+  });
+});
+
+describe("obterTextoAcessivelIndicador (Issue #25)", () => {
+  it("gera texto acessível para saldo positivo, negativo e neutro", () => {
+    assert.strictEqual(
+      obterTextoAcessivelIndicador("saldo", "R$ 500,00", "positivo"),
+      "Resultado: R$ 500,00 (saldo positivo)"
+    );
+
+    assert.strictEqual(
+      obterTextoAcessivelIndicador("saldo", "-R$ 150,00", "negativo"),
+      "Resultado: -R$ 150,00 (saldo negativo)"
+    );
+
+    assert.strictEqual(
+      obterTextoAcessivelIndicador("saldo", "R$ 0,00", "neutro"),
+      "Resultado: R$ 0,00 (saldo zerado)"
+    );
+  });
+
+  it("gera texto acessível para outros indicadores", () => {
+    assert.strictEqual(
+      obterTextoAcessivelIndicador("totalEntradas", "R$ 1.250,00"),
+      "Total de entradas: R$ 1.250,00"
+    );
+
+    assert.strictEqual(
+      obterTextoAcessivelIndicador("totalSaidas", "R$ 320,00"),
+      "Total de saídas: R$ 320,00"
+    );
+
+    assert.strictEqual(
+      obterTextoAcessivelIndicador("ticketMedio", "R$ 125,00"),
+      "Ticket médio: R$ 125,00"
+    );
+  });
+});
+
+describe("formatarDataCurta", () => {
+  it("formata data ISO YYYY-MM-DD para DD/MM", () => {
+    assert.strictEqual(formatarDataCurta("2026-11-16"), "16/11");
+    assert.strictEqual(formatarDataCurta("2026-05-01"), "01/05");
+  });
+
+  it("retorna '--/--' quando data não é informada", () => {
+    assert.strictEqual(formatarDataCurta(null), "--/--");
+    assert.strictEqual(formatarDataCurta(""), "--/--");
+    assert.strictEqual(formatarDataCurta(undefined), "--/--");
+  });
+});
+
