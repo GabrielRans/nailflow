@@ -1776,57 +1776,81 @@ describe("Auth - Fluxo Especial (convite/recuperação de senha)", () => {
 
   it("Cenário A: INITIAL_SESSION inicia processamento, PASSWORD_RECOVERY chega antes da consulta terminar — permanece no fluxo de recuperação", async () => {
     // Este teste simula a condição de corrida real:
-    // 1. INITIAL_SESSION chega com sessão válida
+    // 1. INITIAL_SESSION chega com sessão válida (via callback onAuthStateChange)
     // 2. processarLoginAsync inicia e começa busca assíncrona de estudioId
     // 3. PASSWORD_RECOVERY chega ANTES da busca terminar
     // 4. A busca termina — deve abortar login convencional e manter fluxo de recuperação
+    // 5. Verificar que deduplicação foi limpa (login futuro deve funcionar)
 
+    // Sincronização explícita: promises para coordenar o momento exato da consulta
     let resolveBuscaEstudio;
     const buscaEstudioPromise = new Promise(resolve => {
       resolveBuscaEstudio = resolve;
+    });
+
+    // Promise que resolve quando a consulta de buscarEstudioIdDoUsuario INICIA (atinge o await)
+    let consultaIniciadaResolve;
+    const consultaIniciadaPromise = new Promise(resolve => {
+      consultaIniciadaResolve = resolve;
     });
 
     // Mock buscarEstudioIdDoUsuario que aguarda nossa resolução
     contexto = await criarContextoAuthComHash("#dashboard"); // hash limpo inicialmente
 
     // Sobrescrever buscarEstudioIdDoUsuario para controlar quando termina
-    // Usamos uma closure para capturar a promise resolvível
+    // e SINALIZAR quando a consulta começou (atingiu o await)
     vm.runInContext(`
       let _resolveBuscaEstudio;
       const _buscaEstudioPromise = new Promise(r => { _resolveBuscaEstudio = r; });
+      let _consultaIniciadaResolve;
+      const _consultaIniciadaPromise = new Promise(r => { _consultaIniciadaResolve = r; });
       buscarEstudioIdDoUsuario = async (userId) => {
+        // Sinaliza que a consulta começou (estamos no await)
+        _consultaIniciadaResolve();
         await _buscaEstudioPromise;
         return null; // Sem estúdio vinculado
       };
-      // Expor função de resolução para o teste
+      // Expor funções de resolução para o teste
       __resolveBuscaEstudioTest = () => _resolveBuscaEstudio();
+      __getConsultaIniciadaPromise = () => _consultaIniciadaPromise;
     `, contexto);
 
-    // Inicia processarLoginAsync (simula INITIAL_SESSION com sessão válida)
     const sessaoValida = { user: { id: "user-race-a", email: "race-a@test.com" } };
-    const loginPromise = contexto.processarLoginAsync(sessaoValida, sessaoValida.user);
 
-    // Aguarda um tick para garantir que processarLoginAsync iniciou e está no await buscarEstudioIdDoUsuario
-    await new Promise(r => setTimeout(r, 10));
+    // Dispara INITIAL_SESSION via callback real (simula Supabase recuperando sessão)
+    // Isso inicia processarLoginAsync internamente
+    if (contexto._authStateCallback) {
+      contexto._authStateCallback('INITIAL_SESSION', sessaoValida);
+    }
+
+    // AGUARDA EXPLICITAMENTE a consulta iniciar (atingir o await em buscarEstudioIdDoUsuario)
+    // Obtém a promise do contexto VM e aguarda
+    const consultaIniciadaPromiseVM = vm.runInContext("__getConsultaIniciadaPromise()", contexto);
+    await consultaIniciadaPromiseVM;
+
+    // Sinalização explícita de que a consulta começou: deduplicação deve ter marcado o userId
+    const deduplicacaoIniciada = vm.runInContext("estadoAuth._ultimoUserIdProcessado", contexto);
+    assert.equal(deduplicacaoIniciada, sessaoValida.user.id, "Deduplicação deve marcar userId como em processamento");
 
     // AGORA: Simula PASSWORD_RECOVERY chegando (o fluxo especial começa)
-    // Dispara callback PASSWORD_RECOVERY
+    // Dispara callback PASSWORD_RECOVERY enquanto a consulta está pendente
     if (contexto._authStateCallback) {
       contexto._authStateCallback('PASSWORD_RECOVERY', sessaoValida);
     }
 
-    // Aguarda processamento do PASSWORD_RECOVERY
-    await new Promise(r => setTimeout(r, 10));
+    // Aguarda processamento do PASSWORD_RECOVERY (síncrono no callback)
+    await new Promise(r => setTimeout(r, 0));
 
     // Verifica que fluxo especial foi detectado
     assert.equal(contexto.window.NailFlow.auth.emRedefinicaoSenha, true, "PASSWORD_RECOVERY deve definir emRedefinicaoSenha=true");
-    // _fluxoEspecialDetectado é interno em estadoAuth, verificar via window.NailFlow.auth se exposto
-    // O importante é que emRedefinicaoSenha está true
 
     // AGORA: Resolve a busca de estudioId (a consulta assíncrona termina)
     vm.runInContext("__resolveBuscaEstudioTest();", contexto);
-    resolveBuscaEstudio(); // Resolve a promise externa também (para o await no teste)
-    await loginPromise; // Aguarda conclusão do processarLoginAsync
+    resolveBuscaEstudio(); // Resolve a promise externa também
+
+    // Aguarda conclusão do processamento assíncrono iniciado pelo INITIAL_SESSION
+    // O processarLoginAsync continua após o await e deve abortar ao ver _fluxoEspecialDetectado
+    await new Promise(r => setTimeout(r, 0));
 
     // Verifica que NÃO emitiu eventos de login convencional
     const eventosLogin = eventosAuth.filter(e => e.tipo === 'auth:login');
@@ -1839,8 +1863,35 @@ describe("Auth - Fluxo Especial (convite/recuperação de senha)", () => {
     const eventosRecovery = eventosAuth.filter(e => e.tipo === 'auth:password-recovery');
     assert.ok(eventosRecovery.length > 0, "Deve disparar auth:password-recovery");
 
-    // Verifica que deduplicação foi limpa (permite login futuro)
-    assert.equal(contexto.estadoAuth?._ultimoUserIdProcessado ?? contexto._ultimoUserIdProcessado ?? null, null, "Deduplicação deve ser limpa ao abortar por fluxo especial");
+    // Verifica que emRedefinicaoSenha permanece verdadeiro durante a recuperação
+    assert.equal(contexto.window.NailFlow.auth.emRedefinicaoSenha, true, "emRedefinicaoSenha deve permanecer true");
+
+    // Verifica que deduplicação foi limpa: o userId NÃO deve mais estar marcado como processado
+    const deduplicacaoAposAbort = vm.runInContext("estadoAuth._ultimoUserIdProcessado", contexto);
+    assert.equal(deduplicacaoAposAbort, null, "Deduplicação deve ser limpa (null) ao abortar por fluxo especial");
+
+    // Verificação indireta: após fluxo especial terminar, login convencional futuro deve funcionar
+    // Simula conclusão do fluxo de recuperação (atualizarSenha sem estúdio)
+    await contexto.atualizarSenha("novaSenha123");
+
+    // Verifica que fluxo especial foi limpo
+    assert.equal(contexto.window.NailFlow.auth.emRedefinicaoSenha, false, "Fluxo especial deve ser limpo após conclusão");
+
+    // Simula logout para limpar estado de autenticação
+    await contexto.logout();
+    await new Promise(r => setTimeout(r, 0));
+
+    // Agora simula login convencional bem-sucedido (mesmo userId)
+    const sessaoLogin = { user: { id: "user-race-a", email: "race-a@test.com" } };
+    await contexto.processarLoginAsync(sessaoLogin, sessaoLogin.user);
+
+    // Deve ter processado login convencional (sem bloqueio de fluxo especial ou deduplicação)
+    // Como buscarEstudioIdDoUsuario retorna null (mock padrão), deve disparar auth:unauthorized
+    // O importante: NÃO foi bloqueado por fluxo especial nem por deduplicação
+    const eventosLoginAposFluxo = eventosAuth.filter(e => e.tipo === 'auth:login');
+    const eventosUnauthorizedAposFluxo = eventosAuth.filter(e => e.tipo === 'auth:unauthorized');
+    assert.ok(eventosUnauthorizedAposFluxo.length > 0 || eventosLoginAposFluxo.length > 0,
+      "Deve processar login convencional após fluxo especial terminar (deduplicação limpa)");
   });
 
   it("Cenário B: PASSWORD_RECOVERY chega antes de INITIAL_SESSION — fluxo especial tem prioridade", async () => {
@@ -2005,6 +2056,84 @@ describe("Auth - Fluxo Especial (convite/recuperação de senha)", () => {
     const eventosErro = eventosAuth.slice(eventosAuthAntesLogin).filter(e => e.tipo === 'auth:erro');
     const errosFluxoEspecial = eventosErro.filter(e => e.detail.mensagem && e.detail.mensagem.includes('fluxo especial'));
     assert.equal(errosFluxoEspecial.length, 0, "Não deve haver erro de fluxo especial bloqueando login convencional posterior");
+  });
+
+  // =============================================================================
+  // TESTES: abandonarFluxoEspecial — exportação e comportamento
+  // =============================================================================
+  //
+  // NOTA: O ambiente de teste VM (vm.runInContext) NÃO suporta ES Modules dinâmicos
+  // (import()). Portanto, NÃO é possível testar o import dinâmico real que
+  // navegacao.js faz: import("./auth.js").then(({ abandonarFluxoEspecial }) => ...)
+  //
+  // O que testamos aqui:
+  // 1. Validação da exportação nomeada: verificamos no CÓDIGO FONTE se existe 'export function abandonarFluxoEspecial'
+  // 2. Validação do comportamento da função: chamamos via window.NailFlow.auth._abandonarFluxoEspecial (exposto pelo módulo)
+  // 3. O listener de navegação (hashchange) NÃO é testado aqui — requer ambiente com ES Modules reais
+
+  it("Exportação nomeada: auth.js deve declarar 'export function abandonarFluxoEspecial'", () => {
+    // Validação estática da exportação ES Module no código fonte
+    // Isso comprova que o import dinâmico em navegacao.js encontrará a exportação
+    const codigoAuth = fs.readFileSync("js/auth.js", "utf8");
+    assert.ok(
+      /export\s+function\s+abandonarFluxoEspecial\b/.test(codigoAuth),
+      "auth.js deve conter 'export function abandonarFluxoEspecial' (exportação nomeada ES Module)"
+    );
+  });
+
+  it("Comportamento: abandonarFluxoEspecial limpa estado especial e emite evento", async () => {
+    // Testa o COMPORTAMENTO da função (não a integração com dynamic import)
+    // Acessamos via propriedade global exposta pelo módulo para testes
+    contexto = await criarContextoAuthComHash("#dashboard");
+
+    const sessaoRecovery = { user: { id: "user-hashchange", email: "hashchange@test.com" } };
+    if (contexto._authStateCallback) {
+      contexto._authStateCallback('PASSWORD_RECOVERY', sessaoRecovery);
+    }
+    await new Promise(r => setTimeout(r, 0));
+
+    // Verifica que fluxo especial está ativo
+    assert.equal(contexto.window.NailFlow.auth.emRedefinicaoSenha, true, "Fluxo especial deve estar ativo");
+    assert.equal(sharedSessionStorage.getItem('nailflow_fluxo_especial'), 'true', "sessionStorage deve ter flag");
+
+    // Chama a função via propriedade exposta (valida que a função existe e é acessível)
+    const abandonarFluxoEspecial = contexto.window.NailFlow.auth._abandonarFluxoEspecial;
+    assert.ok(typeof abandonarFluxoEspecial === 'function', "abandonarFluxoEspecial deve ser uma função");
+
+    // Executa a função com motivo (simula hashchange saindo de redefinir-senha)
+    abandonarFluxoEspecial('navegacao-fora-da-tela');
+
+    // Verifica que o estado especial foi limpo
+    assert.equal(contexto.window.NailFlow.auth.emRedefinicaoSenha, false, "emRedefinicaoSenha deve ser false após abandonar");
+    assert.equal(sharedSessionStorage.getItem('nailflow_fluxo_especial'), null, "sessionStorage deve ser limpo");
+
+    // Verifica que evento auth:special-flow-abandoned foi emitido
+    const eventosAbandoned = eventosAuth.filter(e => e.tipo === 'auth:special-flow-abandoned');
+    assert.ok(eventosAbandoned.length > 0, "Deve disparar auth:special-flow-abandoned");
+    assert.equal(eventosAbandoned[0].detail.motivo, 'navegacao-fora-da-tela', "Evento deve conter o motivo");
+  });
+
+  it("Comportamento: abandonarFluxoEspecial é idempotente (chamada dupla não falha)", async () => {
+    // A função deve ser segura para ser chamada múltiplas vezes
+    contexto = await criarContextoAuthComHash("#dashboard");
+
+    const sessaoRecovery = { user: { id: "user-hashchange-2", email: "hashchange2@test.com" } };
+    if (contexto._authStateCallback) {
+      contexto._authStateCallback('PASSWORD_RECOVERY', sessaoRecovery);
+    }
+    await new Promise(r => setTimeout(r, 0));
+
+    const abandonarFluxoEspecial = contexto.window.NailFlow.auth._abandonarFluxoEspecial;
+
+    // Primeira chamada
+    abandonarFluxoEspecial('motivo-1');
+    assert.equal(contexto.window.NailFlow.auth.emRedefinicaoSenha, false);
+
+    // Segunda chamada não deve lançar erro
+    assert.doesNotThrow(() => abandonarFluxoEspecial('motivo-2'), "Chamada dupla não deve lançar erro");
+
+    // Estado permanece limpo
+    assert.equal(contexto.window.NailFlow.auth.emRedefinicaoSenha, false);
   });
 });
 

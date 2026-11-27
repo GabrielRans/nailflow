@@ -113,7 +113,7 @@ function limparFluxoEspecial() {
  * sai do fluxo sem concluir (ex: navega para outra tela, link expirado, login convencional).
  * NÃO deve ser chamada enquanto o fluxo especial ainda estiver sendo processado pelo Supabase.
  */
-function abandonarFluxoEspecial(motivo) {
+export function abandonarFluxoEspecial(motivo) {
   if (!estadoAuth._fluxoEspecialDetectado) return;
 
   console.log('[Auth] Fluxo especial abandonado:', motivo);
