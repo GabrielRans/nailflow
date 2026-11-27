@@ -2157,6 +2157,191 @@ describe("Auth - Fluxo Especial (convite/recuperação de senha)", () => {
     // Estado permanece limpo
     assert.equal(contexto.window.NailFlow.auth.emRedefinicaoSenha, false);
   });
+
+  // =============================================================================
+  // NOVOS TESTES: Erro na consulta de vínculo com estúdio (rede/RLS)
+  // =============================================================================
+
+  it("Erro de rede na consulta de usuários emite auth:erro e auth:pronto (autorizado=false)", async () => {
+    contexto = await criarContextoAuthComHash("#dashboard");
+
+    // Sobrescrever buscarEstudioIdDoUsuario para simular erro de rede
+    vm.runInContext(`
+      buscarEstudioIdDoUsuario = async () => {
+        const err = new Error('Network error');
+        err.code = 'NETWORK_ERROR';
+        throw err;
+      };
+    `, contexto);
+
+    const sessaoMock = { user: { id: "user-network-error", email: "network@test.com" } };
+    await contexto.processarLoginAsync(sessaoMock, sessaoMock.user);
+
+    // Verifica eventos emitidos
+    const eventosErro = eventosAuth.filter(e => e.tipo === 'auth:erro');
+    assert.ok(eventosErro.length > 0, "Deve disparar auth:erro para erro de rede");
+
+    const eventosPronto = eventosAuth.filter(e => e.tipo === 'auth:pronto');
+    assert.ok(eventosPronto.length > 0, "Deve disparar auth:pronto para concluir inicialização");
+    const ultimoPronto = eventosPronto[eventosPronto.length - 1];
+    assert.equal(ultimoPronto.detail.autenticado, true, "auth:pronto deve ter autenticado=true");
+    assert.equal(ultimoPronto.detail.autorizado, false, "auth:pronto deve ter autorizado=false");
+
+    const eventosAuthN = eventosAuth.filter(e => e.tipo === 'auth:authenticated');
+    assert.ok(eventosAuthN.length > 0, "Deve disparar auth:authenticated (AuthN OK)");
+
+    // NÃO deve emitir auth:unauthorized (isso é para "sem vínculo", não erro)
+    const eventosUnauthorized = eventosAuth.filter(e => e.tipo === 'auth:unauthorized');
+    assert.equal(eventosUnauthorized.length, 0, "NÃO deve disparar auth:unauthorized para erro de rede");
+
+    // Estado global: autenticado=true, autorizado=false, estudioId=null
+    assert.equal(contexto.window.NailFlow.auth.autenticado, true, "Usuário deve estar autenticado");
+    assert.equal(contexto.window.NailFlow.auth.autorizado, false, "Usuário NÃO deve estar autorizado");
+    assert.equal(contexto.window.NailFlow.auth.estudioId, null, "estudioId deve ser null");
+
+    // Deduplicação limpa para permitir retry
+    // (testado indiretamente: se não limpasse, próxima chamada seria ignorada)
+  });
+
+  it("Erro de permissão/RLS na consulta de usuários emite auth:erro e auth:pronto (autorizado=false)", async () => {
+    contexto = await criarContextoAuthComHash("#dashboard");
+
+    // Sobrescrever buscarEstudioIdDoUsuario para simular erro de RLS/permissão
+    vm.runInContext(`
+      buscarEstudioIdDoUsuario = async () => {
+        const err = new Error('Permission denied');
+        err.code = '42501'; // Código típico de violação de RLS no Postgres
+        throw err;
+      };
+    `, contexto);
+
+    const sessaoMock = { user: { id: "user-rls-error", email: "rls@test.com" } };
+    await contexto.processarLoginAsync(sessaoMock, sessaoMock.user);
+
+    // Verifica eventos emitidos
+    const eventosErro = eventosAuth.filter(e => e.tipo === 'auth:erro');
+    assert.ok(eventosErro.length > 0, "Deve disparar auth:erro para erro de permissão");
+
+    const eventosPronto = eventosAuth.filter(e => e.tipo === 'auth:pronto');
+    assert.ok(eventosPronto.length > 0, "Deve disparar auth:pronto para concluir inicialização");
+    const ultimoPronto = eventosPronto[eventosPronto.length - 1];
+    assert.equal(ultimoPronto.detail.autenticado, true, "auth:pronto deve ter autenticado=true");
+    assert.equal(ultimoPronto.detail.autorizado, false, "auth:pronto deve ter autorizado=false");
+
+    const eventosAuthN = eventosAuth.filter(e => e.tipo === 'auth:authenticated');
+    assert.ok(eventosAuthN.length > 0, "Deve disparar auth:authenticated (AuthN OK)");
+
+    // NÃO deve emitir auth:unauthorized
+    const eventosUnauthorized = eventosAuth.filter(e => e.tipo === 'auth:unauthorized');
+    assert.equal(eventosUnauthorized.length, 0, "NÃO deve disparar auth:unauthorized para erro de RLS");
+
+    // Estado global: autenticado=true, autorizado=false, estudioId=null
+    assert.equal(contexto.window.NailFlow.auth.autenticado, true, "Usuário deve estar autenticado");
+    assert.equal(contexto.window.NailFlow.auth.autorizado, false, "Usuário NÃO deve estar autorizado");
+    assert.equal(contexto.window.NailFlow.auth.estudioId, null, "estudioId deve ser null");
+  });
+
+  it("Após erro na consulta, nova tentativa de login é possível (deduplicação limpa)", async () => {
+    contexto = await criarContextoAuthComHash("#dashboard");
+
+    // Usar objeto mutável para compartilhar estado entre contexto de teste e vm
+    const estadoTentativa = { count: 0 };
+    const originalBuscar = contexto.buscarEstudioIdDoUsuario;
+    contexto.buscarEstudioIdDoUsuario = async function(userId) {
+      estadoTentativa.count++;
+      if (estadoTentativa.count === 1) {
+        const err = new Error('Temporary error');
+        err.code = 'TEMP_ERROR';
+        throw err;
+      }
+      return 'studio-456';
+    };
+
+    const sessaoMock = { user: { id: "user-retry", email: "retry@test.com" } };
+
+    // Primeira tentativa: erro
+    await contexto.processarLoginAsync(sessaoMock, sessaoMock.user);
+
+    let eventosErro = eventosAuth.filter(e => e.tipo === 'auth:erro');
+    assert.ok(eventosErro.length > 0, "Primeira tentativa deve emitir auth:erro");
+
+    let eventosUnauthorized = eventosAuth.filter(e => e.tipo === 'auth:unauthorized');
+    assert.equal(eventosUnauthorized.length, 0, "NÃO deve emitir auth:unauthorized no erro");
+
+    // Segunda tentativa: sucesso com estúdio
+    eventosAuth.length = 0;
+    await contexto.processarLoginAsync(sessaoMock, sessaoMock.user);
+
+    // Agora deve emitir auth:login (autorizado)
+    const eventosLogin = eventosAuth.filter(e => e.tipo === 'auth:login');
+    assert.ok(eventosLogin.length > 0, "Segunda tentativa deve emitir auth:login quando estúdio encontrado");
+    assert.equal(eventosLogin[0].detail.estudioId, "studio-456", "Deve ter estudioId da segunda tentativa");
+
+    // Estado final autorizado
+    assert.equal(contexto.window.NailFlow.auth.autorizado, true, "Usuário deve estar autorizado após retry bem-sucedido");
+    assert.equal(contexto.window.NailFlow.auth.estudioId, "studio-456", "estudioId deve ser atualizado");
+  });
+
+  it("Fluxo de convite (invite) NÃO é afetado por erro na consulta de vínculo", async () => {
+    // Inicia com hash de convite
+    contexto = await criarContextoAuthComHash("#type=invite&access_token=abc123");
+    assert.equal(contexto.window.NailFlow.auth.emRedefinicaoSenha, true);
+
+    // Simula erro na consulta (não deve afetar guard de fluxo especial)
+    vm.runInContext(`
+      buscarEstudioIdDoUsuario = async () => {
+        throw new Error('Network error');
+      };
+    `, contexto);
+
+    const sessaoMock = { user: { id: "user-invite-error", email: "invite-error@test.com" } };
+    await contexto.processarLoginAsync(sessaoMock, sessaoMock.user);
+
+    // Guard deve impedir processamento convencional
+    // emRedefinicaoSenha deve permanecer true
+    assert.equal(contexto.window.NailFlow.auth.emRedefinicaoSenha, true, "emRedefinicaoSenha deve permanecer true para fluxo de convite");
+
+    // NÃO deve emitir auth:login, auth:unauthorized, auth:authenticated, auth:pronto de login convencional
+    const eventosLogin = eventosAuth.filter(e => e.tipo === 'auth:login');
+    assert.equal(eventosLogin.length, 0, "NÃO deve emitir auth:login quando fluxo especial ativo");
+
+    const eventosUnauthorized = eventosAuth.filter(e => e.tipo === 'auth:unauthorized');
+    assert.equal(eventosUnauthorized.length, 0, "NÃO deve emitir auth:unauthorized quando fluxo especial ativo");
+
+    const eventosAuthN = eventosAuth.filter(e => e.tipo === 'auth:authenticated');
+    assert.equal(eventosAuthN.length, 0, "NÃO deve emitir auth:authenticated de login convencional quando fluxo especial ativo");
+
+    const eventosPronto = eventosAuth.filter(e => e.tipo === 'auth:pronto');
+    // Pode ter auth:pronto do fluxo especial, mas não do login convencional
+    const prontosLogin = eventosPronto.filter(e => e.detail.autenticado === true && e.detail.autorizado === false && !e.detail.emRedefinicaoSenha);
+    assert.equal(prontosLogin.length, 0, "NÃO deve emitir auth:pronto de login convencional quando fluxo especial ativo");
+  });
+
+  it("Fluxo de recuperação (recovery) NÃO é afetado por erro na consulta de vínculo", async () => {
+    // Inicia com hash de recovery
+    contexto = await criarContextoAuthComHash("#type=recovery&access_token=def456");
+    assert.equal(contexto.window.NailFlow.auth.emRedefinicaoSenha, true);
+
+    // Simula erro na consulta
+    vm.runInContext(`
+      buscarEstudioIdDoUsuario = async () => {
+        throw new Error('Network error');
+      };
+    `, contexto);
+
+    const sessaoMock = { user: { id: "user-recovery-error", email: "recovery-error@test.com" } };
+    await contexto.processarLoginAsync(sessaoMock, sessaoMock.user);
+
+    // Guard deve impedir processamento convencional
+    assert.equal(contexto.window.NailFlow.auth.emRedefinicaoSenha, true, "emRedefinicaoSenha deve permanecer true para fluxo de recovery");
+
+    // NÃO deve emitir eventos de login convencional
+    const eventosLogin = eventosAuth.filter(e => e.tipo === 'auth:login');
+    assert.equal(eventosLogin.length, 0, "NÃO deve emitir auth:login quando fluxo especial ativo");
+
+    const eventosUnauthorized = eventosAuth.filter(e => e.tipo === 'auth:unauthorized');
+    assert.equal(eventosUnauthorized.length, 0, "NÃO deve emitir auth:unauthorized quando fluxo especial ativo");
+  });
 });
 
 // =============================================================================

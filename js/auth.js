@@ -645,9 +645,20 @@ async function processarLoginAsync(sessao, usuario) {
       estudioId = await buscarEstudioIdDoUsuario(usuario.id);
     } catch (err) {
       // Erro real ao consultar vínculo (rede, RLS, etc.) — não é "sem estúdio"
-      // Limpa marca de deduplicação e propaga como erro de autenticação
+      // AuthN está OK (tem sessão), mas AuthZ não pôde ser confirmado
+      // Emite auth:authenticated + auth:pronto (autorizado=false) para navegação concluir init
+      // Emite auth:erro para informar o problema ao usuário
+      // Limpa deduplicação para permitir retry
       estadoAuth._ultimoUserIdProcessado = null;
       console.error('[Auth] Erro ao buscar vínculo com estúdio:', err);
+
+      const autenticado = true;
+      const autorizado = false;
+
+      atualizarEstadoAuth(sessao, usuario, null);
+
+      dispararEvento('auth:authenticated', { usuario, sessao });
+      dispararEvento('auth:pronto', { autenticado, autorizado });
       dispararEvento('auth:erro', {
         mensagem: 'Erro ao verificar vínculo com estúdio. Tente novamente.',
         erro: err
