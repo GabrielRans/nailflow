@@ -1623,3 +1623,177 @@ describe("Auth - Fluxo Especial (convite/recuperação de senha)", () => {
     assert.equal(ultimoPronto.detail.autorizado, false, "auth:pronto deve ter autorizado=false");
   });
 });
+
+// =============================================================================
+// TESTES: Navegação - auth:password-updated listener
+// =============================================================================
+
+describe("Navegação - auth:password-updated listener", () => {
+  let mockDocument;
+  let mockWindow;
+  let mockLocation;
+  let reloadCalled;
+  let hashChanged;
+
+  function criarContextoNavegacao() {
+    reloadCalled = false;
+    hashChanged = false;
+
+    mockLocation = {
+      _hash: "#redefinir-senha",
+      pathname: "/",
+      origin: "http://localhost",
+      set hash(value) {
+        hashChanged = true;
+        this._hash = value;
+      },
+      get hash() {
+        return this._hash;
+      }
+    };
+
+    mockDocument = {
+      _eventos: {},
+      dispatchEvent(evento) {
+        if (this._eventos[evento.type]) {
+          this._eventos[evento.type].forEach(cb => cb(evento));
+        }
+        return true;
+      },
+      addEventListener(tipo, callback) {
+        this._eventos[tipo] = this._eventos[tipo] || [];
+        this._eventos[tipo].push(callback);
+      },
+      removeEventListener(tipo, callback) {
+        if (this._eventos[tipo]) {
+          this._eventos[tipo] = this._eventos[tipo].filter(cb => cb !== callback);
+        }
+      },
+      querySelector() { return null; }
+    };
+
+    mockWindow = {
+      NailFlow: { auth: { emRedefinicaoSenha: true } },
+      _eventos: {},
+      dispatchEvent(evento) {
+        if (this._eventos[evento.type]) {
+          this._eventos[evento.type].forEach(cb => cb(evento));
+        }
+        return true;
+      },
+      addEventListener(tipo, callback) {
+        this._eventos[tipo] = this._eventos[tipo] || [];
+        this._eventos[tipo].push(callback);
+      },
+      removeEventListener(tipo, callback) {
+        if (this._eventos[tipo]) {
+          this._eventos[tipo] = this._eventos[tipo].filter(cb => cb !== callback);
+        }
+      },
+      location: mockLocation,
+      history: {
+        replaceState: () => {},
+        pushState: () => {}
+      },
+      localStorage: {
+        _store: {},
+        getItem(chave) { return this._store[chave] ?? null; },
+        setItem(chave, valor) { this._store[chave] = valor; },
+        removeItem(chave) { delete this._store[chave]; },
+        clear() { this._store = {}; }
+      },
+      sessionStorage: {
+        _store: {},
+        getItem(chave) { return this._store[chave] ?? null; },
+        setItem(chave, valor) { this._store[chave] = valor; },
+        removeItem(chave) { delete this._store[chave]; },
+        clear() { this._store = {}; }
+      }
+    };
+
+    // Adiciona reload no location (navegacao.js usa window.location.reload())
+    mockLocation.reload = function() {
+      reloadCalled = true;
+    };
+
+    const ctx = vm.createContext({
+      crypto: webcrypto,
+      window: mockWindow,
+      document: mockDocument,
+      CustomEvent: function(type, options = {}) {
+        this.type = type;
+        this.detail = options.detail;
+      },
+      console,
+      setTimeout,
+      clearTimeout,
+      URLSearchParams
+    });
+
+    // Carrega o código do navegacao.js
+    const codigoNavegacao = fs.readFileSync("js/navegacao.js", "utf8");
+    vm.runInContext(codigoNavegacao, ctx);
+
+    // Chama inicializarAuthListeners() diretamente para registrar os listeners de auth
+    // (evita depender de DOMContentLoaded que precisa de DOM completo)
+    vm.runInContext("inicializarAuthListeners()", ctx);
+
+    return ctx;
+  }
+
+  it("auth:password-updated com sucesso: true define hash #dashboard e recarrega a página", () => {
+    const ctx = criarContextoNavegacao();
+
+    // Verifica estado inicial
+    assert.equal(mockLocation.hash, "#redefinir-senha");
+    assert.equal(reloadCalled, false);
+
+    // Dispara auth:password-updated com sucesso: true
+    mockWindow.dispatchEvent(new ctx.CustomEvent("auth:password-updated", { detail: { sucesso: true } }));
+
+    // Verifica que hash foi alterado para #dashboard
+    assert.equal(mockLocation.hash, "#dashboard", "Hash deve ser alterado para #dashboard");
+
+    // Verifica que reload foi chamado
+    assert.equal(reloadCalled, true, "window.location.reload() deve ser chamado após sucesso");
+  });
+
+  it("auth:password-updated sem sucesso NÃO recarrega a página", () => {
+    const ctx = criarContextoNavegacao();
+
+    // Dispara auth:password-updated SEM sucesso
+    mockWindow.dispatchEvent(new ctx.CustomEvent("auth:password-updated", { detail: {} }));
+
+    // Verifica que hash NÃO foi alterado (continua em redefinir-senha)
+    assert.equal(mockLocation.hash, "#redefinir-senha", "Hash não deve ser alterado sem sucesso");
+
+    // Verifica que reload NÃO foi chamado
+    assert.equal(reloadCalled, false, "window.location.reload() NÃO deve ser chamado sem sucesso");
+  });
+
+  it("auth:password-updated com sucesso: false NÃO recarrega a página", () => {
+    const ctx = criarContextoNavegacao();
+
+    // Dispara auth:password-updated com sucesso: false
+    mockWindow.dispatchEvent(new ctx.CustomEvent("auth:password-updated", { detail: { sucesso: false } }));
+
+    // Verifica que hash NÃO foi alterado
+    assert.equal(mockLocation.hash, "#redefinir-senha", "Hash não deve ser alterado com sucesso: false");
+
+    // Verifica que reload NÃO foi chamado
+    assert.equal(reloadCalled, false, "window.location.reload() NÃO deve ser chamado com sucesso: false");
+  });
+
+  it("auth:password-updated sem detail NÃO recarrega a página", () => {
+    const ctx = criarContextoNavegacao();
+
+    // Dispara auth:password-updated sem detail
+    mockWindow.dispatchEvent(new ctx.CustomEvent("auth:password-updated", { detail: undefined }));
+
+    // Verifica que hash NÃO foi alterado
+    assert.equal(mockLocation.hash, "#redefinir-senha", "Hash não deve ser alterado sem detail");
+
+    // Verifica que reload NÃO foi chamado
+    assert.equal(reloadCalled, false, "window.location.reload() NÃO deve ser chamado sem detail");
+  });
+});

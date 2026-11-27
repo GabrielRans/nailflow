@@ -665,8 +665,15 @@ function inicializarAuthListeners() {
   // Senha atualizada com sucesso
   window.addEventListener("auth:password-updated", (event) => {
     console.log('[Navegação] auth:password-updated recebido', event.detail);
-    // Limpa estado de redefinição e redireciona para dashboard
-    window.location.hash = "#dashboard";
+    // Só recarrega se o evento indicar sucesso explícito
+    // O evento é disparado apenas após supabase.auth.updateUser() retornar sucesso
+    if (event.detail?.sucesso === true) {
+      // Define a rota para dashboard e recarrega a página
+      // O recarregamento garante que a inicialização normal recupere a sessão do Supabase
+      // e processe a autenticação/autorização corretamente
+      window.location.hash = "#dashboard";
+      window.location.reload();
+    }
   });
 }
 
