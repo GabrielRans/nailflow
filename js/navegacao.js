@@ -589,14 +589,31 @@ function inicializarAuthListeners() {
   window.addEventListener("auth:unauthorized", (event) => {
     console.log('[Navegação] auth:unauthorized recebido', event.detail);
     authInicializado = true;
-    // Mostra tela de login com mensagem de erro
-    alternarVisibilidadeApp(false, false);
-    const erroEl = document.getElementById("login-erro");
-    if (erroEl) {
-      erroEl.textContent = event.detail.mensagem || "Usuário não vinculado a nenhum estúdio.";
-      erroEl.hidden = false;
+
+    // Se estamos no fluxo de redefinição de senha, não redirecionar para login
+    // Apenas exibir a mensagem informativa na tela atual
+    const emRedefinicaoSenha = window.NailFlow?.auth?.emRedefinicaoSenha === true;
+    const rotaAtual = obterRotaAtual();
+
+    if (emRedefinicaoSenha || rotaAtual === "redefinir-senha") {
+      console.log('[Navegação] Usuário sem estúdio após redefinição de senha — exibindo mensagem sem redirecionar');
+      alternarVisibilidadeApp(false, true); // Mantém tela de redefinição visível
+      const erroEl = document.getElementById("redefinir-senha-erro");
+      if (erroEl) {
+        erroEl.textContent = event.detail.mensagem || "Usuário não vinculado a nenhum estúdio.";
+        erroEl.hidden = false;
+      }
+      // Não redireciona para login - usuário permanece na tela de redefinição
+    } else {
+      // Fluxo normal: mostra tela de login com mensagem de erro
+      alternarVisibilidadeApp(false, false);
+      const erroEl = document.getElementById("login-erro");
+      if (erroEl) {
+        erroEl.textContent = event.detail.mensagem || "Usuário não vinculado a nenhum estúdio.";
+        erroEl.hidden = false;
+      }
+      window.location.hash = "#login";
     }
-    window.location.hash = "#login";
   });
 
   // Apenas autenticado (AuthN OK) - para UI que precise saber
@@ -628,9 +645,11 @@ function inicializarAuthListeners() {
     console.log('[Navegação] auth:pronto', event.detail);
     authInicializado = true;
     // Exibe app apenas se autenticado E autorizado
+    // Se emRedefinicaoSenha estiver ativo (fluxo invite/recovery), mostra tela de redefinição
     const autenticado = event.detail.autenticado === true;
     const autorizado = event.detail.autorizado === true;
-    alternarVisibilidadeApp(autenticado && autorizado, false);
+    const emRedefinicaoSenha = event.detail.emRedefinicaoSenha === true;
+    alternarVisibilidadeApp(autenticado && autorizado, emRedefinicaoSenha);
     atualizarNavegacao(false);
   });
 
@@ -650,11 +669,42 @@ function inicializarAuthListeners() {
     }
   });
 
+  // Fluxo especial abandonado (usuário saiu da tela, link expirou, login convencional)
+  window.addEventListener("auth:special-flow-abandoned", (event) => {
+    console.log('[Navegação] auth:special-flow-abandoned recebido', event.detail);
+    // Se estava na tela de redefinir-senha, voltar para login
+    const rotaAtual = obterRotaAtual();
+    if (rotaAtual === "redefinir-senha") {
+      window.location.hash = "#login";
+    }
+  });
+
   // Senha atualizada com sucesso
   window.addEventListener("auth:password-updated", (event) => {
     console.log('[Navegação] auth:password-updated recebido', event.detail);
-    // Limpa estado de redefinição e redireciona para dashboard
-    window.location.hash = "#dashboard";
+    // Só processa se o evento indicar sucesso explícito
+    // O evento é disparado apenas após supabase.auth.updateUser() retornar sucesso
+    if (event.detail?.sucesso === true) {
+      const autenticado = event.detail.autenticado === true;
+      const autorizado = event.detail.autorizado === true;
+      const estudioId = event.detail.estudioId;
+
+      if (autenticado && autorizado && estudioId) {
+        // Usuário autenticado E autorizado (tem estúdio) → vai para dashboard com reload
+        // O recarregamento garante que a inicialização normal recupere a sessão do Supabase
+        window.location.hash = "#dashboard";
+        window.location.reload();
+      } else if (autenticado && !autorizado) {
+        // Usuário autenticado mas SEM autorização (sem estúdio)
+        // Não recarrega - mantém o usuário na tela atual (redefinir-senha)
+        // e exibe mensagem informativa. O evento auth:unauthorized já foi disparado
+        // pelo auth.js com a mensagem adequada.
+        console.log('[Navegação] Senha atualizada mas usuário sem estúdio vinculado');
+        // O listener de auth:unauthorized já trata a exibição da mensagem
+        // e não redireciona para login se já estivermos no fluxo de redefinição
+      }
+      // Se não autenticado (não deveria acontecer), não faz nada
+    }
   });
 }
 
@@ -662,7 +712,28 @@ function inicializarAuthListeners() {
 // Inicialização
 // =============================================================================
 
-window.addEventListener("hashchange", atualizarNavegacao);
+window.addEventListener("hashchange", (event) => {
+  // Detectar abandono do fluxo especial: usuário navegou para fora de redefinir-senha
+  // enquanto emRedefinicaoSenha estava true
+  const hashNovo = window.location.hash.slice(1);
+
+  // Mais confiável: verificar se ANTES estávamos em redefinir-senha e agora não estamos
+  // Usamos rotaAnterior para rastrear a rota anterior
+  if (rotaAnterior === "redefinir-senha" && hashNovo !== "redefinir-senha") {
+    const emRedefinicaoSenha = window.NailFlow?.auth?.emRedefinicaoSenha === true;
+    if (emRedefinicaoSenha) {
+      console.log('[Navegação] Usuário saiu de redefinir-senha — abandonando fluxo especial');
+      // Import dinâmico para evitar dependência circular
+      import("./auth.js").then(({ abandonarFluxoEspecial }) => {
+        abandonarFluxoEspecial('navegacao-fora-da-tela');
+      }).catch(() => {
+        // Se falhar import, o auth.js já limpará no logout/login
+      });
+    }
+  }
+
+  atualizarNavegacao();
+});
 
 document.addEventListener("DOMContentLoaded", () => {
   configurarLogout();
