@@ -1029,6 +1029,28 @@ describe("Auth - Fluxo Especial (convite/recuperação de senha)", () => {
             }
             return { data: { session: null } };
           },
+        },
+        // Mock para queries de banco (buscarEstudioIdDoUsuario)
+        from: (table) => {
+          if (table === 'usuarios') {
+            return {
+              select: (columns) => ({
+                eq: (column, value) => ({
+                  single: async () => {
+                    // Simula PGRST116 (nenhuma linha encontrada) - usuário sem vínculo
+                    return { data: null, error: { code: 'PGRST116', message: 'No rows found' } };
+                  }
+                })
+              })
+            };
+          }
+          return {
+            select: () => ({
+              eq: () => ({
+                single: async () => ({ data: null, error: { code: 'PGRST116', message: 'No rows found' } })
+              })
+            })
+          };
         }
       }
     });
