@@ -1013,7 +1013,16 @@ describe("Auth - Fluxo Especial (convite/recuperação de senha)", () => {
             }
             return { error: null };
           },
-          updateUser: async () => ({ error: null })
+          updateUser: async () => ({
+            error: null,
+            data: {
+              session: {
+                user: { id: "user-123", email: "test@test.com" },
+                access_token: "mock-access-token",
+                refresh_token: "mock-refresh-token"
+              }
+            }
+          })
         }
       }
     });
@@ -1132,6 +1141,135 @@ describe("Auth - Fluxo Especial (convite/recuperação de senha)", () => {
     const eventosUpdated = eventosAuth.filter(e => e.tipo === 'auth:password-updated');
     assert.ok(eventosUpdated.length > 0, "Deve disparar auth:password-updated");
     assert.equal(eventosUpdated[0].detail.sucesso, true);
+  });
+
+  // =============================================================================
+  // NOVOS TESTES: atualizarSenha() implementação real (com/sem vínculo de estúdio)
+  // =============================================================================
+
+  it("atualizarSenha com estúdio vinculado (autorizado) dispara auth:password-updated com autorizado=true e estudioId", async () => {
+    // Mock buscarEstudioIdDoUsuario para retornar estudioId
+    contexto = await criarContextoAuthComHash("#type=recovery&access_token=def456");
+
+    // Sobrescrever buscarEstudioIdDoUsuario no contexto para retornar um estudioId
+    vm.runInContext("buscarEstudioIdDoUsuario = async () => 'studio-123';", contexto);
+
+    assert.equal(contexto.window.NailFlow.auth.emRedefinicaoSenha, true);
+
+    await contexto.atualizarSenha("novaSenha123");
+
+    // Verifica estado final: autenticado E autorizado
+    assert.equal(contexto.window.NailFlow.auth.autenticado, true, "Usuário deve estar autenticado após atualizar senha com sucesso");
+    assert.equal(contexto.window.NailFlow.auth.autorizado, true, "Usuário deve estar autorizado (tem estúdio vinculado)");
+    assert.equal(contexto.window.NailFlow.auth.estudioId, "studio-123", "estudioId deve ser definido");
+
+    // Verifica evento auth:password-updated com dados corretos
+    const eventosUpdated = eventosAuth.filter(e => e.tipo === 'auth:password-updated');
+    assert.ok(eventosUpdated.length > 0, "Deve disparar auth:password-updated");
+    const detail = eventosUpdated[0].detail;
+    assert.equal(detail.sucesso, true);
+    assert.equal(detail.autenticado, true);
+    assert.equal(detail.autorizado, true);
+    assert.equal(detail.estudioId, "studio-123");
+    assert.ok(detail.usuario, "usuario deve estar presente");
+    assert.equal(detail.usuario.id, "user-123"); // ID do usuário da sessão mockada
+    // SEGURANÇA: NÃO deve expor sessão/tokens no evento
+    assert.ok(!detail.sessao, "Evento NÃO deve conter sessão (access_token/refresh_token)");
+
+    // Verifica que também disparou auth:login (AuthN + AuthZ OK)
+    const eventosLogin = eventosAuth.filter(e => e.tipo === 'auth:login');
+    assert.ok(eventosLogin.length > 0, "Deve disparar auth:login quando autorizado");
+    assert.equal(eventosLogin[0].detail.estudioId, "studio-123");
+
+    // Verifica que NÃO disparou auth:unauthorized
+    const eventosUnauthorized = eventosAuth.filter(e => e.tipo === 'auth:unauthorized');
+    assert.equal(eventosUnauthorized.length, 0, "NÃO deve disparar auth:unauthorized quando tem estúdio vinculado");
+  });
+
+  it("atualizarSenha sem estúdio vinculado (não autorizado) dispara auth:password-updated com autorizado=false e auth:unauthorized", async () => {
+    contexto = await criarContextoAuthComHash("#type=recovery&access_token=def456");
+
+    // buscarEstudioIdDoUsuario retorna null por padrão (mock padrão)
+    assert.equal(contexto.window.NailFlow.auth.emRedefinicaoSenha, true);
+
+    await contexto.atualizarSenha("novaSenha123");
+
+    // Verifica estado final: autenticado mas NÃO autorizado
+    assert.equal(contexto.window.NailFlow.auth.autenticado, true, "Usuário deve estar autenticado após atualizar senha com sucesso");
+    assert.equal(contexto.window.NailFlow.auth.autorizado, false, "Usuário NÃO deve estar autorizado (sem estúdio vinculado)");
+    assert.equal(contexto.window.NailFlow.auth.estudioId, null, "estudioId deve ser null");
+
+    // Verifica evento auth:password-updated com dados corretos
+    const eventosUpdated = eventosAuth.filter(e => e.tipo === 'auth:password-updated');
+    assert.ok(eventosUpdated.length > 0, "Deve disparar auth:password-updated");
+    const detail = eventosUpdated[0].detail;
+    assert.equal(detail.sucesso, true);
+    assert.equal(detail.autenticado, true);
+    assert.equal(detail.autorizado, false);
+    assert.equal(detail.estudioId, null);
+    assert.ok(detail.usuario, "usuario deve estar presente");
+    // SEGURANÇA: NÃO deve expor sessão/tokens no evento
+    assert.ok(!detail.sessao, "Evento NÃO deve conter sessão (access_token/refresh_token)");
+
+    // Verifica que disparou auth:unauthorized (AuthN OK, mas sem AuthZ)
+    const eventosUnauthorized = eventosAuth.filter(e => e.tipo === 'auth:unauthorized');
+    assert.ok(eventosUnauthorized.length > 0, "Deve disparar auth:unauthorized quando sem estúdio vinculado");
+    assert.ok(eventosUnauthorized[0].detail.mensagem, "auth:unauthorized deve conter mensagem informativa");
+
+    // Verifica que NÃO disparou auth:login
+    const eventosLogin = eventosAuth.filter(e => e.tipo === 'auth:login');
+    assert.equal(eventosLogin.length, 0, "NÃO deve disparar auth:login quando sem estúdio vinculado");
+
+    // Verifica que NÃO fez logout indevido (signOut não deve ser chamado)
+    // O estado autenticado deve permanecer true
+    assert.equal(contexto.window.NailFlow.auth.autenticado, true, "Usuário deve permanecer autenticado (sem logout indevido)");
+  });
+
+  it("atualizarSenha NÃO expõe tokens de autenticação no evento auth:password-updated", async () => {
+    contexto = await criarContextoAuthComHash("#type=recovery&access_token=def456");
+
+    // Mock buscarEstudioIdDoUsuario para retornar estudioId
+    vm.runInContext("buscarEstudioIdDoUsuario = async () => 'studio-123';", contexto);
+
+    await contexto.atualizarSenha("novaSenha123");
+
+    const eventosUpdated = eventosAuth.filter(e => e.tipo === 'auth:password-updated');
+    assert.ok(eventosUpdated.length > 0, "Deve disparar auth:password-updated");
+    const detail = eventosUpdated[0].detail;
+
+    // SEGURANÇA: Verificar que não há sessão, access_token, refresh_token no evento
+    assert.ok(!detail.sessao, "Evento NÃO deve conter propriedade 'sessao'");
+    assert.ok(!detail.access_token, "Evento NÃO deve conter access_token");
+    assert.ok(!detail.refresh_token, "Evento NÃO deve conter refresh_token");
+    assert.ok(!detail.expires_at, "Evento NÃO deve conter expires_at");
+    assert.ok(!detail.token_type, "Evento NÃO deve conter token_type");
+
+    // Deve conter apenas dados mínimos necessários
+    assert.ok(detail.sucesso !== undefined);
+    assert.ok(detail.autenticado !== undefined);
+    assert.ok(detail.autorizado !== undefined);
+    assert.ok(detail.estudioId !== undefined);
+    assert.ok(detail.usuario !== undefined);
+  });
+
+  it("atualizarSenha sem logout indevido - usuário permanece autenticado mesmo sem estúdio", async () => {
+    contexto = await criarContextoAuthComHash("#type=recovery&access_token=def456");
+
+    // Mock signOut para detectar se foi chamado indevidamente
+    let signOutCalled = false;
+    vm.runInContext("supabase.auth.signOut = async () => { signOutCalled = true; return { error: null }; }", contexto);
+
+    await contexto.atualizarSenha("novaSenha123");
+
+    // Verifica que signOut NÃO foi chamado
+    assert.equal(signOutCalled, false, "supabase.auth.signOut() NÃO deve ser chamado durante atualizarSenha");
+
+    // Verifica que usuário permanece autenticado
+    assert.equal(contexto.window.NailFlow.auth.autenticado, true, "Usuário deve permanecer autenticado após atualizar senha");
+
+    // Verifica que auth:logout NÃO foi disparado
+    const eventosLogout = eventosAuth.filter(e => e.tipo === 'auth:logout');
+    assert.equal(eventosLogout.length, 0, "NÃO deve disparar auth:logout durante atualização de senha");
   });
 
   it("logout limpa estado de fluxo especial", async () => {
@@ -1741,21 +1879,42 @@ describe("Navegação - auth:password-updated listener", () => {
     return ctx;
   }
 
-  it("auth:password-updated com sucesso: true define hash #dashboard e recarrega a página", () => {
+  it("auth:password-updated com sucesso E autorizado (tem estúdio) define hash #dashboard e recarrega a página", () => {
     const ctx = criarContextoNavegacao();
 
     // Verifica estado inicial
     assert.equal(mockLocation.hash, "#redefinir-senha");
     assert.equal(reloadCalled, false);
 
-    // Dispara auth:password-updated com sucesso: true
-    mockWindow.dispatchEvent(new ctx.CustomEvent("auth:password-updated", { detail: { sucesso: true } }));
+    // Dispara auth:password-updated com sucesso: true E autorizado: true (tem estúdio)
+    mockWindow.dispatchEvent(new ctx.CustomEvent("auth:password-updated", {
+      detail: { sucesso: true, autenticado: true, autorizado: true, estudioId: "studio-123" }
+    }));
 
     // Verifica que hash foi alterado para #dashboard
     assert.equal(mockLocation.hash, "#dashboard", "Hash deve ser alterado para #dashboard");
 
     // Verifica que reload foi chamado
-    assert.equal(reloadCalled, true, "window.location.reload() deve ser chamado após sucesso");
+    assert.equal(reloadCalled, true, "window.location.reload() deve ser chamado após sucesso com autorização");
+  });
+
+  it("auth:password-updated com sucesso mas SEM autorização (sem estúdio) NÃO recarrega e NÃO redireciona para login", () => {
+    const ctx = criarContextoNavegacao();
+
+    // Verifica estado inicial
+    assert.equal(mockLocation.hash, "#redefinir-senha");
+    assert.equal(reloadCalled, false);
+
+    // Dispara auth:password-updated com sucesso: true mas autorizado: false (sem estúdio)
+    mockWindow.dispatchEvent(new ctx.CustomEvent("auth:password-updated", {
+      detail: { sucesso: true, autenticado: true, autorizado: false, estudioId: null }
+    }));
+
+    // Verifica que hash NÃO foi alterado (continua em redefinir-senha)
+    assert.equal(mockLocation.hash, "#redefinir-senha", "Hash não deve ser alterado sem autorização");
+
+    // Verifica que reload NÃO foi chamado
+    assert.equal(reloadCalled, false, "window.location.reload() NÃO deve ser chamado sem autorização");
   });
 
   it("auth:password-updated sem sucesso NÃO recarrega a página", () => {

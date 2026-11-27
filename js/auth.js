@@ -323,10 +323,26 @@ export async function atualizarSenha(novaSenha) {
     // REQUER sessão válida do Supabase (token de recuperação ativo).
     // O sessionStorage NÃO substitui a validação do Supabase.
     // Se não houver sessão válida, o Supabase retornará erro.
-    const { error } = await supabase.auth.updateUser({
+    const { error, data } = await supabase.auth.updateUser({
       password: novaSenha
     });
     if (error) throw error;
+
+    const sessao = data?.session;
+    const usuario = sessao?.user;
+
+    // Determinar estado de autorização após atualização bem-sucedida
+    // Buscar estudioId para saber se usuário tem vínculo com estúdio
+    let estudioId = null;
+    if (usuario) {
+      estudioId = await buscarEstudioIdDoUsuario(usuario.id);
+    }
+
+    const autenticado = !!sessao && !!usuario;
+    const autorizado = autenticado && !!estudioId;
+
+    // Atualizar estado interno com o estado real de autorização
+    atualizarEstadoAuth(sessao, usuario, estudioId);
 
     // Sucesso: limpa o estado de fluxo especial completamente (flag interna + sessionStorage)
     limparFluxoEspecial();
@@ -336,8 +352,32 @@ export async function atualizarSenha(novaSenha) {
       window.history.replaceState({}, document.title, window.location.pathname);
     }
 
-    dispararEvento('auth:password-updated', { sucesso: true });
-    return { sucesso: true };
+    // Dispara evento com informação completa de autorização para navegação decidir o fluxo
+    // NÃO incluir sessão (contém access_token/refresh_token) - apenas dados mínimos necessários
+    dispararEvento('auth:password-updated', {
+      sucesso: true,
+      autenticado,
+      autorizado,
+      estudioId,
+      usuario: usuario ? { id: usuario.id, email: usuario.email } : null
+    });
+
+    // Também dispara eventos padrão de auth para manter consistência
+    if (autenticado) {
+      dispararEvento('auth:authenticated', { usuario, sessao });
+      if (autorizado) {
+        dispararEvento('auth:login', { usuario, estudioId, sessao });
+      } else {
+        dispararEvento('auth:unauthorized', {
+          usuario,
+          sessao,
+          mensagem: 'Sua conta não está vinculada a nenhum estúdio. Entre em contato com o suporte: nailflow.suporte@outlook.com'
+        });
+        dispararEvento('auth:pronto', { autenticado: true, autorizado: false });
+      }
+    }
+
+    return { sucesso: true, autenticado, autorizado, estudioId };
   } catch (err) {
     console.error('[Auth] Erro ao atualizar senha:', err);
 
