@@ -1005,7 +1005,6 @@ describe("Auth - Fluxo Especial (convite/recuperação de senha)", () => {
           signInWithPassword: async ({ email, password }) => {
             return { data: { user: null, session: null }, error: new Error('Invalid login credentials') };
           },
-          getSession: async () => ({ data: { session: null } }),
           signOut: async () => {
             // Dispara callback SIGNED_OUT para simular logout real
             if (ctx._authStateCallback) {
@@ -1013,19 +1012,29 @@ describe("Auth - Fluxo Especial (convite/recuperação de senha)", () => {
             }
             return { error: null };
           },
-          updateUser: async () => ({
-            error: null,
-            data: {
-              session: {
-                user: { id: "user-123", email: "test@test.com" },
-                access_token: "mock-access-token",
-                refresh_token: "mock-refresh-token"
+          updateUser: async () => {
+            ctx._updateUserCalled = true;
+            return {
+              error: null,
+              data: {
+                user: { id: "user-123", email: "test@test.com" }
               }
+            };
+          },
+          getSession: async () => {
+            // Antes do updateUser(), retorna null (simula token não processado)
+            // Após updateUser(), retorna sessão válida
+            if (ctx._updateUserCalled) {
+              return { data: { session: { user: { id: "user-123", email: "test@test.com" }, access_token: "mock-access-token", refresh_token: "mock-refresh-token" } } };
             }
-          })
+            return { data: { session: null } };
+          },
         }
       }
     });
+
+    // Inicializa flag para controlar comportamento do getSession
+    ctx._updateUserCalled = false;
 
     // Carrega o código do auth.js no contexto
     const codigoAuth = fs.readFileSync("js/auth.js", "utf8")

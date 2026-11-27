@@ -328,8 +328,18 @@ export async function atualizarSenha(novaSenha) {
     });
     if (error) throw error;
 
-    const sessao = data?.session;
-    const usuario = sessao?.user;
+    // updateUser() retorna o usuário atualizado em data.user
+    // A sessão não é retornada pelo updateUser(); precisamos buscá-la com getSession()
+    const usuario = data?.user;
+    if (!usuario) {
+      throw new Error('Usuário não retornado pelo Supabase após atualização de senha');
+    }
+
+    // Recuperar a sessão atual para confirmar autenticação
+    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError) throw sessionError;
+
+    const sessao = sessionData?.session;
 
     // Determinar estado de autorização após atualização bem-sucedida
     // Buscar estudioId para saber se usuário tem vínculo com estúdio
